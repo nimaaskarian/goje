@@ -27,9 +27,11 @@ func main() {
   buff := make([]byte, 1024)
   for {
     conn, err := ln.Accept()
+    conn.Write([]byte("OK PD 0.0.1\n"))
     for {
       if err != nil {
-        log.Fatal(err)
+        log.Println("Error: ", err)
+        break
       }
       n, err := conn.Read(buff)
       if err == io.EOF {

@@ -13,6 +13,7 @@ const (
 	Pause    = "pause"
 	Seek     = "seek"
 	Reset    = "reset"
+	Init     = "init"
 	Commands = "commands"
 )
 
@@ -34,9 +35,9 @@ func (e WrongNumberOfArgsError) Error() string {
 
 func ParseInput(timer *timer.Timer, input string) (string, string, error) {
 	splited := strings.Split(input, " ")
-  cmd := splited[0]
-  var err error
-  var out string
+	cmd := splited[0]
+	var err error
+	var out string
 	switch splited[0] {
 	case Pause:
 		out, err = pauseCmd(timer, splited)
@@ -44,16 +45,19 @@ func ParseInput(timer *timer.Timer, input string) (string, string, error) {
 		out, err = seekCmd(timer, splited)
 	case Reset:
 		out, err = resetCmd(timer, splited)
-  case Commands:
-    out, err = fmt.Sprintf(`command: %s
+	case Init:
+		out, err = initCmd(timer, splited)
+	case Commands:
+		out, err = fmt.Sprintf(`command: %s
 command: %s
 command: %s
-command: %s`, Pause, Seek, Reset, Commands), nil
-  default:
-    out, err = "", errors.New(fmt.Sprintf("command not found \"%s\"", splited[0]))
-    cmd = ""
+command: %s
+command: %s`, Pause, Seek, Reset, Init, Commands), nil
+	default:
+		out, err = "", errors.New(fmt.Sprintf("command not found \"%s\"", splited[0]))
+		cmd = ""
 	}
-  return cmd, out, err
+	return cmd, out, err
 }
 
 func pauseCmd(timer *timer.Timer, args []string) (string, error) {
@@ -98,6 +102,16 @@ func resetCmd(timer *timer.Timer, args []string) (string, error) {
 	switch len(args) {
 	case 1:
 		timer.Reset()
+	default:
+		return "", TooManyArgsError{args[0]}
+	}
+	return "", nil
+}
+
+func initCmd(timer *timer.Timer, args []string) (string, error) {
+	switch len(args) {
+	case 1:
+		timer.Init()
 	default:
 		return "", TooManyArgsError{args[0]}
 	}
