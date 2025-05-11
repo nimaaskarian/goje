@@ -3,6 +3,7 @@ package requests
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -10,11 +11,14 @@ import (
 )
 
 const (
-	Pause    = "pause"
-	Seek     = "seek"
-	Reset    = "reset"
-	Init     = "init"
-	Commands = "commands"
+	Pause     = "pause"
+	Seek      = "seek"
+	Reset     = "reset"
+	CycleMode = "cyclemode"
+	Skip      = "skip"
+	Init      = "init"
+	Timer     = "timer"
+	Commands  = "commands"
 )
 
 type TooManyArgsError struct {
@@ -47,14 +51,22 @@ func ParseInput(timer *timer.Timer, input string) (string, string, error) {
 		out, err = resetCmd(timer, splited)
 	case Init:
 		out, err = initCmd(timer, splited)
+	case Timer:
+		out, err = timerCmd(timer, splited)
+	case CycleMode:
+	case Skip:
+		out, err = cycleModeCmd(timer, splited)
 	case Commands:
 		out, err = fmt.Sprintf(`command: %s
 command: %s
 command: %s
 command: %s
-command: %s`, Pause, Seek, Reset, Init, Commands), nil
+command: %s
+command: %s
+command: %s
+`, Pause, Seek, Reset, Init, CycleMode, Skip, Commands), nil
 	default:
-		out, err = "", errors.New(fmt.Sprintf("command not found \"%s\"", splited[0]))
+		out, err = "", errors.New(fmt.Sprintf("command not found %q", splited[0]))
 		cmd = ""
 	}
 	return cmd, out, err
@@ -106,6 +118,45 @@ func resetCmd(timer *timer.Timer, args []string) (string, error) {
 		return "", TooManyArgsError{args[0]}
 	}
 	return "", nil
+}
+
+func cycleModeCmd(timer *timer.Timer, args []string) (string, error) {
+	switch len(args) {
+	case 1:
+		timer.CycleMode()
+	default:
+		return "", TooManyArgsError{args[0]}
+	}
+	return "", nil
+}
+
+func timerCmd(timer *timer.Timer, args []string) (string, error) {
+	switch len(args) {
+	case 1:
+		timer_value := reflect.ValueOf(*timer)
+		typ := timer_value.Type()
+		var out string
+		for i := range timer_value.NumField() {
+			name := typ.Field(i).Name
+			if name == "Config" {
+				continue
+			}
+			value := timer_value.Field(i).Interface()
+			out += fmt.Sprintln(name+":", value)
+		}
+		return out, nil
+  case 2:
+    name := args[1]
+		timer_value := reflect.ValueOf(*timer)
+    field := timer_value.FieldByName(name)
+    if field.IsValid() {
+      return fmt.Sprintln(field.Interface()), nil
+    } else {
+      return "", errors.New(fmt.Sprintf("field doesn't exist on timer: %q", name))
+    }
+	default:
+		return "", TooManyArgsError{args[0]}
+	}
 }
 
 func initCmd(timer *timer.Timer, args []string) (string, error) {

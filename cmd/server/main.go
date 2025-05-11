@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -39,14 +40,12 @@ func main() {
       } else if err != nil {
         log.Println("Error: ", err)
       }
-      cmd, out, err := requests.ParseInput(&t, string(buff[:n-1]))
+      cmd, out, err := requests.ParseInput(&t, string(bytes.TrimSpace(buff[:n])))
       if err != nil {
         fmt.Println(err)
         conn.Write(fmt.Appendf(nil, "ACK {%s} %s\n", cmd, err))
       } else {
-        if out != "" {
-          conn.Write([]byte(out+"\n"))
-        }
+        conn.Write([]byte(out))
         conn.Write([]byte("OK\n"))
       }
     }

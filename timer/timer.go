@@ -44,14 +44,14 @@ type Timer struct {
 }
 
 func (t *Timer) Reset() {
-	t.Duration = t.Config.Duration[t.Mode]
+  t.SeekTo(t.Config.Duration[t.Mode])
 }
 
 func (t *Timer) Init() {
 	t.Mode = Pomodoro
 	t.SessionCount = t.Config.SessionCount
 	t.Paused = t.Config.Paused
-	t.Duration = t.Config.Duration[t.Mode]
+  t.Reset()
 }
 
 func (t *Timer) SeekTo(duration time.Duration) {
