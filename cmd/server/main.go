@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net"
 
 	"github.com/nimaaskarian/pomodoro/requests"
@@ -28,21 +29,22 @@ func main() {
   buff := make([]byte, 1024)
   for {
     conn, err := ln.Accept()
+    if err != nil {
+      slog.Warn("connection throw error", "err", err)
+      continue
+    }
     conn.Write([]byte("OK PD 0.0.1\n"))
     for {
-      if err != nil {
-        log.Println("Error: ", err)
-        break
-      }
       n, err := conn.Read(buff)
       if err == io.EOF {
         break
       } else if err != nil {
-        log.Println("Error: ", err)
+        slog.Warn("read throw error", "err", err)
+        continue
       }
       cmd, out, err := requests.ParseInput(&t, string(bytes.TrimSpace(buff[:n])))
       if err != nil {
-        fmt.Println(err)
+        slog.Error("command throw error", "err", err)
         conn.Write(fmt.Appendf(nil, "ACK {%s} %s\n", cmd, err))
       } else {
         conn.Write([]byte(out))
