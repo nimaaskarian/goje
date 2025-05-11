@@ -171,7 +171,7 @@ func initCmd(timer *timer.Timer, args []string) (string, error) {
 
 func parseBool(input string) (bool, error) {
 	if input != "1" && input != "0" {
-		return false, errors.New("Expected boolean (0/1): " + input)
+		return false, errors.New("boolean (0/1) expected: \"" + input + "\"")
 	}
 	return input == "1", nil
 }
