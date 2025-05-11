@@ -1,10 +1,12 @@
 all: bin/tomc bin/tom
-SRC_SERVER = $(wildcard requests/*.go timer/*.go cmd/server/*.go)
-SRC_CLIENT = $(wildcard requests/*.go timer/*.go cmd/client/*.go)
-bin/tomc: $(SRC_CLIENT)
+SRC = $(wildcard requests/*.go timer/*.go)
+SRC_SERVER = $(wildcard cmd/server/*.go)
+SRC_CLIENT = $(wildcard cmd/client/*.go)
+
+bin/tomc: $(SRC_CLIENT) $(SRC)
 	cd cmd/client && go build
 	mv cmd/client/client bin/tomc
 
-bin/tom: $(SRC_SERVER)
+bin/tom: $(SRC_SERVER) $(SRC)
 	cd cmd/server && go build
 	mv cmd/server/server bin/tom
