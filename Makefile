@@ -1,15 +1,8 @@
-all: coverage.out bin/tomc bin/tom
-SRC = $(wildcard requests/*.go timer/*.go)
-SRC_SERVER = $(wildcard cmd/server/*.go)
-SRC_CLIENT = $(wildcard cmd/client/*.go)
+all: coverage.out tom
+SRC = $(shell find -name "*.go" -type f)
 
-coverage.out: $(shell find -name "*.go" -type f)
+coverage.out: $(SRC)
 	go test ./... -coverprofile=coverage.out
 
-bin/tomc: $(SRC_CLIENT) $(SRC)
-	cd cmd/client && go build
-	mv cmd/client/client bin/tomc
-
-bin/tom: $(SRC_SERVER) $(SRC)
-	cd cmd/server && go build
-	mv cmd/server/server bin/tom
+tom: $(SRC)
+	go build

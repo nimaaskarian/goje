@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nimaaskarian/pomodoro/timer"
+	"github.com/nimaaskarian/tom/timer"
 )
 
 const (
@@ -64,7 +64,8 @@ command: %s
 command: %s
 command: %s
 command: %s
-`, Pause, Seek, Reset, Init, CycleMode, Skip, Commands), nil
+command: %s
+`, Pause, Seek, Reset, Init, CycleMode, Skip, Timer, Commands), nil
 	default:
 		out, err = "", errors.New(fmt.Sprintf("command not found %q", splited[0]))
 		cmd = ""
@@ -138,9 +139,6 @@ func timerCmd(timer *timer.Timer, args []string) (string, error) {
 		var out string
 		for i := range timer_value.NumField() {
 			name := typ.Field(i).Name
-			if name == "Config" {
-				continue
-			}
 			value := timer_value.Field(i).Interface()
 			out += fmt.Sprintln(name+":", value)
 		}
