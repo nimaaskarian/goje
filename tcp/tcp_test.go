@@ -1,4 +1,4 @@
-package requests
+package tcp
 
 import (
 	"bufio"
@@ -18,7 +18,7 @@ type Command struct {
 
 func genCommands() (chan Command, error) {
   ch := make(chan Command)
-  file, err := os.Open("./requests.go")
+  file, err := os.Open("./tcp.go")
   if err != nil {
     return nil, err
   }

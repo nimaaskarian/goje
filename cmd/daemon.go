@@ -1,13 +1,9 @@
 package cmd
 
 import (
-	"bytes"
 	"fmt"
-	"io"
-	"log/slog"
-	"net"
 
-	"github.com/nimaaskarian/tom/requests"
+	"github.com/nimaaskarian/tom/tcp"
 	"github.com/nimaaskarian/tom/timer"
 	"github.com/spf13/cobra"
 )
@@ -15,7 +11,7 @@ import (
 // server flags
 var (
 	address  string
-	buffsize int
+	buffsize uint
 )
 
 var tomato = timer.Timer{
@@ -46,53 +42,30 @@ func init() {
 		"duration of long break sections of the timer",
 	)
 	daemonCmd.PersistentFlags().StringVarP(&address, "address", "a", ":8088", "address:[port] for the daemon to listen to")
-	daemonCmd.PersistentFlags().IntVar(&buffsize, "buff-size", 1024, "size of buffer that messages are parsed with")
+	daemonCmd.PersistentFlags().UintVar(&buffsize, "buff-size", 1024, "size of buffer that messages are parsed with")
 }
 
 var daemonCmd = &cobra.Command{
 	Aliases: []string{
+		"daemon",
 		"server",
 		"d",
 		"s",
 	},
 	Use:   "daemon",
-	Short: "run a tom daemon",
+	Short: "run a pomodoro tcp daemon",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		ln, err := net.Listen("tcp", address)
-		if err != nil {
-			return err
-		}
 		tomato.Config.OnTick = func(*timer.Timer) {
 			fmt.Println(tomato.String())
 		}
 		tomato.Config.OnSeek = tomato.Config.OnTick
 		tomato.Init()
 		go tomato.Loop()
-		buff := make([]byte, buffsize)
-		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				slog.Warn("connection throw error", "err", err)
-				continue
-			}
-			conn.Write([]byte("OK tom 0.0.1\n"))
-			for {
-				n, err := conn.Read(buff)
-				if err == io.EOF {
-					break
-				} else if err != nil {
-					slog.Warn("read throw error", "err", err)
-					continue
-				}
-				cmd, out, err := requests.ParseInput(&tomato, string(bytes.TrimSpace(buff[:n])))
-				if err != nil {
-					slog.Error("command throw error", "err", err)
-					conn.Write(fmt.Appendf(nil, "ACK {%s} %s\n", cmd, err))
-				} else {
-					conn.Write([]byte(out))
-					conn.Write([]byte("OK\n"))
-				}
-			}
+		ln, err := tcp.NetListener(address)
+		if err != nil {
+			return err
 		}
+    tcp.RunTcpDaemon(&tomato, ln, buffsize)
+		return nil
 	},
 }
