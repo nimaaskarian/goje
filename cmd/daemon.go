@@ -2,21 +2,22 @@ package cmd
 
 import (
 	"fmt"
-	"log"
-	"os"
-
 	"github.com/nimaaskarian/tom/json"
 	"github.com/nimaaskarian/tom/tcp"
 	"github.com/nimaaskarian/tom/timer"
+	"github.com/nimaaskarian/tom/activitywatch"
 	"github.com/spf13/cobra"
+	"log"
+	"os"
 )
 
 // server flags
 var (
-	tcp_address  string
-	json_address string
-	buffsize     uint
-	print        bool
+	tcp_address   string
+	json_address  string
+	buffsize      uint
+	should_print  bool
+	run_activitywatch bool
 )
 
 var config = timer.DefaultConfig
@@ -47,7 +48,8 @@ func init() {
 	daemonCmd.PersistentFlags().StringVarP(&tcp_address, "tcp-address", "a", ":8088", "address:[port] for tcp pomodoro daemon")
 	daemonCmd.PersistentFlags().StringVarP(&json_address, "json-address", "j", "", "address:[port] for http json pomodoro daemon (doesn't run when empty)")
 	daemonCmd.PersistentFlags().UintVar(&buffsize, "buff-size", 1024, "size of buffer that messages are parsed with")
-	daemonCmd.PersistentFlags().BoolVar(&print, "print", false, "the daemon prints current duration to stderr on ticks when this option is present")
+	daemonCmd.PersistentFlags().BoolVar(&should_print, "print", false, "the daemon prints current duration to stderr on ticks when this option is present")
+	daemonCmd.PersistentFlags().BoolVarP(&run_activitywatch, "activitywatch", "w", false, "activitywatch port. doesn't send pomodoro data to activitywatch if is empty")
 }
 
 var daemonCmd = &cobra.Command{
@@ -60,12 +62,15 @@ var daemonCmd = &cobra.Command{
 	Use:   "daemon",
 	Short: "run a pomodoro tcp daemon",
 	RunE: func(cmd *cobra.Command, args []string) error {
-    if print {
-      config.AfterTick = func(timer *timer.Timer) {
-        fmt.Fprintln(os.Stderr, timer)
-      }
-      config.AfterSeek = config.AfterTick
-    }
+		if should_print {
+			config.AfterTick = func(timer *timer.Timer) {
+				fmt.Fprintln(os.Stderr, timer)
+			}
+			config.AfterSeek = config.AfterTick
+		}
+		if run_activitywatch {
+      activitywatch.SetupTimerConfig(&config)
+		}
 		tomato := timer.Timer{}
 		tomato.SetConfig(config)
 		tomato.Init()
