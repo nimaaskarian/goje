@@ -143,19 +143,21 @@ func timerCmd(timer *timer.Timer, args []string) (string, error) {
 		var out string
 		for i := range timer_value.NumField() {
 			name := typ.Field(i).Name
-			value := timer_value.Field(i).Interface()
-			out += fmt.Sprintln(name+":", value)
+      if name[0] >= 'A' && name[0] <= 'Z' {
+        obj := timer_value.Field(i).Interface()
+        out += fmt.Sprintf("%s: %v\n", name, obj)
+      }
 		}
 		return out, nil
-  case 2:
-    name := args[1]
+	case 2:
+		name := args[1]
 		timer_value := reflect.ValueOf(*timer)
-    field := timer_value.FieldByName(name)
-    if field.IsValid() {
-      return fmt.Sprintln(field.Interface()), nil
-    } else {
-      return "", errors.New(fmt.Sprintf("field doesn't exist on timer: %q", name))
-    }
+		field := timer_value.FieldByName(name)
+		if field.IsValid() {
+			return fmt.Sprintln(field.Interface()), nil
+		} else {
+			return "", errors.New(fmt.Sprintf("field doesn't exist on timer: %q", name))
+		}
 	default:
 		return "", TooManyArgsError{args[0]}
 	}
@@ -178,40 +180,45 @@ func parseBool(input string) (bool, error) {
 	return input == "1", nil
 }
 
-func NetListener(address string) (net.Listener, error) {
-  ln, err := net.Listen("tcp", address)
-  if err != nil {
-    return nil, err
-  }
-  return ln, nil
+type Daemon struct {
+	Timer   *timer.Timer
+	Listener net.Listener
+	Buffsize uint
 }
 
-func RunTcpDaemon(tomato * timer.Timer, ln net.Listener, buffsize uint) {
-		buff := make([]byte, buffsize)
+func (d *Daemon) InitializeListener(address string) error {
+  var err error
+	d.Listener, err = net.Listen("tcp", address)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (d *Daemon) Run() {
+	buff := make([]byte, d.Buffsize)
+	for {
+		conn, err := d.Listener.Accept()
+		if err != nil {
+			slog.Warn("connection throw error", "err", err)
+			continue
+		}
+		conn.Write([]byte("OK tom 0.0.1\n"))
 		for {
-			conn, err := ln.Accept()
-			if err != nil {
-				slog.Warn("connection throw error", "err", err)
+			n, err := conn.Read(buff)
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				slog.Warn("read throw error", "err", err)
 				continue
 			}
-			conn.Write([]byte("OK tom 0.0.1\n"))
-			for {
-				n, err := conn.Read(buff)
-				if err == io.EOF {
-					break
-				} else if err != nil {
-					slog.Warn("read throw error", "err", err)
-					continue
-				}
-				cmd, out, err := ParseInput(tomato, string(bytes.TrimSpace(buff[:n])))
-				if err != nil {
-					slog.Error("command throw error", "err", err)
-					conn.Write(fmt.Appendf(nil, "ACK {%s} %s\n", cmd, err))
-				} else {
-					conn.Write([]byte(out))
-					conn.Write([]byte("OK\n"))
-				}
+			cmd, out, err := ParseInput(d.Timer, string(bytes.TrimSpace(buff[:n])))
+			if err != nil {
+				slog.Error("command throw error", "err", err)
+				conn.Write(fmt.Appendf(nil, "ACK {%s} %s\n", cmd, err))
+			} else {
+				conn.Write(append([]byte(out), []byte("OK\n")...))
 			}
 		}
-
+	}
 }
