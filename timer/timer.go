@@ -75,14 +75,14 @@ func (t *Timer) tick() {
 		time.Sleep(t.Config.DurationPerTick)
 		return
 	}
-	if t.Config.OnTick != nil {
-		t.Config.OnTick(t)
-	}
 	if t.Duration == 0 {
 		t.CycleMode()
 	}
 	time.Sleep(t.Config.DurationPerTick)
 	t.Duration -= t.Config.DurationPerTick
+	if t.Config.OnTick != nil {
+		t.Config.OnTick(t)
+	}
 }
 
 // Halts the current thread for ever. Use in a go routine.
