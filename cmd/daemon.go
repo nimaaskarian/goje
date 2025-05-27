@@ -31,7 +31,7 @@ func init() {
 		&tomato.Config.Duration[timer.ShortBreak],
 		"short-break-duration",
 		"s",
-		timer.DefaultConfig.Duration[timer.LongBreak],
+		timer.DefaultConfig.Duration[timer.ShortBreak],
 		"duration of short break sections of the timer",
 	)
 	daemonCmd.PersistentFlags().DurationVarP(
@@ -61,11 +61,11 @@ var daemonCmd = &cobra.Command{
 		tomato.Config.OnSeek = tomato.Config.OnTick
 		tomato.Init()
 		go tomato.Loop()
-		ln, err := tcp.NetListener(address)
+		tcpln, err := tcp.NetListener(address)
 		if err != nil {
 			return err
 		}
-    tcp.RunTcpDaemon(&tomato, ln, buffsize)
+    tcp.RunTcpDaemon(&tomato, tcpln, buffsize)
 		return nil
 	},
 }

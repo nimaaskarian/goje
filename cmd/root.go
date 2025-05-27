@@ -9,13 +9,13 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "tom",
-	Short: "tom is a mpd-like pomodoro timer",
-  RunE: daemonCmd.RunE,
+	Short: "tom is a server-client pomodoro timer",
+	Long: "tom is a mpd-like, client server pomodoro timer with modern features",
 }
 
 func Execute() {
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
+  if err := rootCmd.Execute(); err != nil {
+    fmt.Println(err)
+    os.Exit(1)
+  }
 }
