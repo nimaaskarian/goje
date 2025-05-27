@@ -14,10 +14,10 @@ type Daemon struct {
 
 func (d *Daemon) Init() {
 	d.router = gin.Default()
-	d.router.GET("/json/timer", func(c *gin.Context) {
+	d.router.GET("/api/timer", func(c *gin.Context) {
 		c.JSON(http.StatusOK, d.Timer)
 	})
-	d.router.POST("/json/timer", func(c *gin.Context) {
+	d.router.POST("/api/timer", func(c *gin.Context) {
     c.BindJSON(d.Timer)
 	})
 }

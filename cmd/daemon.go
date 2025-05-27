@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/nimaaskarian/tom/activitywatch"
 	"github.com/nimaaskarian/tom/json"
 	"github.com/nimaaskarian/tom/tcp"
 	"github.com/nimaaskarian/tom/timer"
-	"github.com/nimaaskarian/tom/activitywatch"
 	"github.com/spf13/cobra"
 	"log"
 	"os"
@@ -13,10 +13,11 @@ import (
 
 // server flags
 var (
-	tcp_address   string
-	json_address  string
-	buffsize      uint
-	should_print  bool
+	tcp_address       string
+	json_address      string
+	buffsize          uint
+	should_print      bool
+	write_path        string
 	run_activitywatch bool
 )
 
@@ -50,6 +51,7 @@ func init() {
 	daemonCmd.PersistentFlags().UintVar(&buffsize, "buff-size", 1024, "size of buffer that messages are parsed with")
 	daemonCmd.PersistentFlags().BoolVar(&should_print, "print", false, "the daemon prints current duration to stderr on ticks when this option is present")
 	daemonCmd.PersistentFlags().BoolVarP(&run_activitywatch, "activitywatch", "w", false, "activitywatch port. doesn't send pomodoro data to activitywatch if is empty")
+  daemonCmd.PersistentFlags().StringVar(&write_path, "write-file", "", "write last timer in a file at given path. empty means no write")
 }
 
 var daemonCmd = &cobra.Command{
@@ -62,26 +64,33 @@ var daemonCmd = &cobra.Command{
 	Use:   "daemon",
 	Short: "run a pomodoro tcp daemon",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if should_print {
 			config.AfterTick = func(timer *timer.Timer) {
-				fmt.Fprintln(os.Stderr, timer)
+        if should_print {
+          fmt.Fprintln(os.Stderr, timer)
+        }
+        if write_path != "" {
+          if err := os.WriteFile(write_path, []byte(timer.String()), 0644); err != nil {
+            log.Fatalln(err)
+          }
+        }
 			}
 			config.AfterSeek = config.AfterTick
-		}
 		if run_activitywatch {
-      activitywatch.SetupTimerConfig(&config)
+			activitywatch.SetupTimerConfig(&config)
 		}
 		tomato := timer.Timer{}
 		tomato.SetConfig(config)
 		tomato.Init()
-		go tomato.Loop()
-		tcp_daemon := tcp.Daemon{
-			Timer:    &tomato,
-			Buffsize: buffsize,
-		}
-		if err := tcp_daemon.InitializeListener(tcp_address); err != nil {
-			return err
-		}
+    if tcp_address != "" {
+      tcp_daemon := tcp.Daemon{
+        Timer:    &tomato,
+        Buffsize: buffsize,
+      }
+      if err := tcp_daemon.InitializeListener(tcp_address); err != nil {
+        return err
+      }
+      go tcp_daemon.Run()
+    }
 		if json_address != "" {
 			json_deamon := json.Daemon{
 				Timer: &tomato,
@@ -93,7 +102,7 @@ var daemonCmd = &cobra.Command{
 				}
 			}()
 		}
-		tcp_daemon.Run()
+		tomato.Loop()
 		return nil
 	},
 }
