@@ -19,6 +19,7 @@ var (
 	json_address      string
 	buffsize          uint
 	should_print      bool
+	no_webgui      bool
 	write_path        string
 	run_activitywatch bool
 )
@@ -50,6 +51,7 @@ func init() {
 	)
 	daemonCmd.PersistentFlags().StringVarP(&tcp_address, "tcp-address", "a", ":8088", "address:[port] for tcp pomodoro daemon")
 	daemonCmd.PersistentFlags().StringVarP(&json_address, "json-address", "j", "", "address:[port] for http json pomodoro daemon (doesn't run when empty)")
+	daemonCmd.PersistentFlags().BoolVar(&no_webgui, "no-webgui", false, "don't run webgui. webgui can't be run without the json server")
 	daemonCmd.PersistentFlags().UintVar(&buffsize, "buff-size", 1024, "size of buffer that messages are parsed with")
 	daemonCmd.PersistentFlags().BoolVar(&should_print, "print", false, "the daemon prints current duration to stderr on ticks when this option is present")
 	daemonCmd.PersistentFlags().BoolVarP(&run_activitywatch, "activitywatch", "w", false, "activitywatch port. doesn't send pomodoro data to activitywatch if is empty")
@@ -95,6 +97,10 @@ var daemonCmd = &cobra.Command{
         TimerJsonChan: timerchan,
 			}
 			json_deamon.Init()
+      json_deamon.JsonRoutes()
+      if !no_webgui {
+        json_deamon.WebguiRoutes()
+      }
 			go func() {
 				if err := json_deamon.Run(json_address); err != nil {
 					log.Fatalln(err)

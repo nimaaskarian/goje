@@ -7,7 +7,7 @@ export function App() {
   const [timer, setTimer] = useState()
   const postTimer = () => {
     let xhr = new XMLHttpRequest();
-    xhr.open("POST", 'http://127.0.0.1:8089/api/timer', true);
+    xhr.open("POST", '/api/timer', true);
     xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8")
     xhr.responseType = 'json'
     xhr.onload = () => {
@@ -18,7 +18,7 @@ export function App() {
     xhr.send(JSON.stringify(timer));
   }
   useEffect(()=> {
-    const sse = new EventSource("http://127.0.0.1:8089/api/timer/stream")
+    const sse = new EventSource("/api/timer/stream")
     console.log("oh my")
     sse.onopen = e => {
       console.log("open", e)

@@ -12,6 +12,9 @@ type Daemon struct {
 
 func (d *Daemon) Init() {
 	d.router = gin.Default()
+  d.router.Use(func(c *gin.Context) {
+    c.Writer.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+  })
 }
 
 func (s *Daemon) Run(address string) error {

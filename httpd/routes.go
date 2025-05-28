@@ -10,14 +10,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-//go:embed webgui-preact/dist
+//go:embed webgui-preact/dist/*
 var embed_fs embed.FS
 
-func JsonRoutes(d *Daemon) {
+func (d *Daemon) JsonRoutes() {
 	d.router.GET("/api/timer", func(c *gin.Context) {
+		c.Header("Cache-Control", "no-cache")
 		c.JSON(http.StatusOK, d.Timer)
 	})
 	d.router.POST("/api/timer", func(c *gin.Context) {
+		c.Header("Cache-Control", "no-cache")
 		c.BindJSON(d.Timer)
 		c.JSON(http.StatusOK, d.Timer)
 	})
@@ -28,7 +30,7 @@ func JsonRoutes(d *Daemon) {
 		c.Header("Transfer-Encoding", "chunked")
 		c.Stream(func(w io.Writer) bool {
 			if timer, ok := <-d.TimerJsonChan; ok {
-        fmt.Println(timer)
+				fmt.Println(timer)
 				c.SSEvent("timer", timer)
 				return true
 			}
@@ -37,7 +39,11 @@ func JsonRoutes(d *Daemon) {
 	})
 }
 
-func WebguiRoutes(d *Daemon) {
-	static, _ := fs.Sub(embed_fs, "webgui-preact/dist/")
-  d.router.StaticFS("/", http.FS(static))
+func (d *Daemon) WebguiRoutes() {
+	static, _ := fs.Sub(embed_fs, "webgui-preact/dist/assets")
+	d.router.StaticFS("/assets", http.FS(static))
+	d.router.GET("/", func (c *gin.Context) {
+    data, _ := embed_fs.ReadFile("webgui-preact/dist/index.html")
+    c.Data(http.StatusOK, "text/html;  charset=utf-8", data)
+  })
 }
