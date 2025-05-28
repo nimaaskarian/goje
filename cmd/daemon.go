@@ -7,8 +7,8 @@ import (
 	"os"
 
 	"github.com/nimaaskarian/tom/activitywatch"
-	jsond "github.com/nimaaskarian/tom/json"
-	"github.com/nimaaskarian/tom/tcp"
+	"github.com/nimaaskarian/tom/httpd"
+	"github.com/nimaaskarian/tom/tcpd"
 	"github.com/nimaaskarian/tom/timer"
 	"github.com/spf13/cobra"
 )
@@ -73,7 +73,7 @@ var daemonCmd = &cobra.Command{
 		}
 		tomato := timer.Timer{}
 		if tcp_address != "" {
-			tcp_daemon := tcp.Daemon{
+			tcp_daemon := tcpd.Daemon{
 				Timer:    &tomato,
 				Buffsize: buffsize,
 			}
@@ -90,7 +90,7 @@ var daemonCmd = &cobra.Command{
 				timerchan <- string(bytes)
 			}
 			config.AfterSeek = config.AfterTick
-			json_deamon := jsond.Daemon{
+			json_deamon := httpd.Daemon{
 				Timer: &tomato,
         TimerJsonChan: timerchan,
 			}

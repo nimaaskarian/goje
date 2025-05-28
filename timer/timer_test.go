@@ -8,7 +8,7 @@ import (
 
 func TestCycleMode(t *testing.T) {
 	timer := Timer{
-		Config: DefaultConfig,
+		config: DefaultConfig,
   }
   timer.Init()
   for range 3 {
@@ -32,7 +32,7 @@ func TestTick(t *testing.T) {
   config.DurationPerTick = time.Millisecond*10
 
 	timer := Timer{
-		Config: config,
+		config: config,
   }
   timer.Init()
   for i := range 5 {
@@ -49,7 +49,7 @@ func TestLoop(t *testing.T) {
   config.DurationPerTick = time.Millisecond*10
 
 	timer := Timer{
-		Config: config,
+		config: config,
   }
   timer.Init()
   go timer.Loop()
@@ -69,7 +69,7 @@ func TestTimer(t *testing.T) {
   config.Duration[LongBreak] = 5*config.DurationPerTick
 
 	timer := Timer{
-		Config: config,
+		config: config,
   }
   timer.Init()
   go timer.Loop()
@@ -89,14 +89,14 @@ func TestTimer(t *testing.T) {
 
 func ExampleTimer_String() {
 	timer := Timer{
-		Config: DefaultConfig,
+		config: DefaultConfig,
   }
   timer.Init()
   fmt.Println(timer.String())
-  timer.Config.Duration[Pomodoro] = 3 * time.Hour + 8 * time.Minute + 10 * time.Second
+  timer.config.Duration[Pomodoro] = 3 * time.Hour + 8 * time.Minute + 10 * time.Second
   timer.Init()
   fmt.Println(timer.String())
-  timer.Config.Duration[Pomodoro] = 50 * time.Second
+  timer.config.Duration[Pomodoro] = 50 * time.Second
   timer.Init()
   fmt.Println(timer.String())
   // Output:

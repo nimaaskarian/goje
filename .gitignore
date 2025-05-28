@@ -1,11 +1,12 @@
 coverage.out
 tom
 
-webgui-preact/logs
-webgui-preact/*.log
-webgui-preact/npm-debug.log*
-webgui-preact/yarn-debug.log*
-webgui-preact/yarn-error.log*
-webgui-preact/pnpm-debug.log*
-webgui-preact/lerna-debug.log*
-webgui-preact/node_modules
+httpd/webgui-preact/logs
+httpd/webgui-preact/*.log
+httpd/webgui-preact/npm-debug.log*
+httpd/webgui-preact/yarn-debug.log*
+httpd/webgui-preact/yarn-error.log*
+httpd/webgui-preact/pnpm-debug.log*
+httpd/webgui-preact/lerna-debug.log*
+httpd/webgui-preact/node_modules/
+httpd/webgui-preact/dist/
