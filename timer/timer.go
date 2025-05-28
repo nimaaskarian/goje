@@ -75,14 +75,13 @@ func (t *Timer) SeekAdd(duration time.Duration) {
 }
 
 func (t *Timer) tick() {
+  time.Sleep(t.config.DurationPerTick)
 	if t.Paused {
-		time.Sleep(t.config.DurationPerTick)
 		return
 	}
 	if t.Duration <= 0 {
 		t.CycleMode()
 	}
-	time.Sleep(t.config.DurationPerTick)
 	t.Duration -= t.config.DurationPerTick
 	if t.config.AfterTick != nil {
 		t.config.AfterTick(t)

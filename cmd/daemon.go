@@ -1,14 +1,16 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
+	"os"
+
 	"github.com/nimaaskarian/tom/activitywatch"
-	"github.com/nimaaskarian/tom/json"
+	jsond "github.com/nimaaskarian/tom/json"
 	"github.com/nimaaskarian/tom/tcp"
 	"github.com/nimaaskarian/tom/timer"
 	"github.com/spf13/cobra"
-	"log"
-	"os"
 )
 
 // server flags
@@ -51,7 +53,7 @@ func init() {
 	daemonCmd.PersistentFlags().UintVar(&buffsize, "buff-size", 1024, "size of buffer that messages are parsed with")
 	daemonCmd.PersistentFlags().BoolVar(&should_print, "print", false, "the daemon prints current duration to stderr on ticks when this option is present")
 	daemonCmd.PersistentFlags().BoolVarP(&run_activitywatch, "activitywatch", "w", false, "activitywatch port. doesn't send pomodoro data to activitywatch if is empty")
-  daemonCmd.PersistentFlags().StringVar(&write_path, "write-file", "", "write last timer in a file at given path. empty means no write")
+	daemonCmd.PersistentFlags().StringVar(&write_path, "write-file", "", "write last timer in a file at given path. empty means no write")
 }
 
 var daemonCmd = &cobra.Command{
@@ -64,36 +66,33 @@ var daemonCmd = &cobra.Command{
 	Use:   "daemon",
 	Short: "run a pomodoro tcp daemon",
 	RunE: func(cmd *cobra.Command, args []string) error {
-			config.AfterTick = func(timer *timer.Timer) {
-        if should_print {
-          fmt.Fprintln(os.Stderr, timer)
-        }
-        if write_path != "" {
-          if err := os.WriteFile(write_path, []byte(timer.String()), 0644); err != nil {
-            log.Fatalln(err)
-          }
-        }
-			}
-			config.AfterSeek = config.AfterTick
+		config.AfterTick = afterTick
+		config.AfterSeek = config.AfterTick
 		if run_activitywatch {
 			activitywatch.SetupTimerConfig(&config)
 		}
 		tomato := timer.Timer{}
-		tomato.SetConfig(config)
-		tomato.Init()
-    if tcp_address != "" {
-      tcp_daemon := tcp.Daemon{
-        Timer:    &tomato,
-        Buffsize: buffsize,
-      }
-      if err := tcp_daemon.InitializeListener(tcp_address); err != nil {
-        return err
-      }
-      go tcp_daemon.Run()
-    }
+		if tcp_address != "" {
+			tcp_daemon := tcp.Daemon{
+				Timer:    &tomato,
+				Buffsize: buffsize,
+			}
+			if err := tcp_daemon.InitializeListener(tcp_address); err != nil {
+				return err
+			}
+			go tcp_daemon.Run()
+		}
 		if json_address != "" {
-			json_deamon := json.Daemon{
+			timerchan := make(chan string)
+			config.AfterTick = func(t *timer.Timer) {
+				afterTick(t)
+				bytes, _ := json.Marshal(t)
+				timerchan <- string(bytes)
+			}
+			config.AfterSeek = config.AfterTick
+			json_deamon := jsond.Daemon{
 				Timer: &tomato,
+        TimerJsonChan: timerchan,
 			}
 			json_deamon.Init()
 			go func() {
@@ -102,7 +101,20 @@ var daemonCmd = &cobra.Command{
 				}
 			}()
 		}
+		tomato.SetConfig(config)
+		tomato.Init()
 		tomato.Loop()
 		return nil
 	},
+}
+
+func afterTick(timer *timer.Timer) {
+	if should_print {
+		fmt.Fprintln(os.Stderr, timer)
+	}
+	if write_path != "" {
+		if err := os.WriteFile(write_path, []byte(timer.String()), 0644); err != nil {
+			log.Fatalln(err)
+		}
+	}
 }

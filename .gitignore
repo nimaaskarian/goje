@@ -1,2 +1,11 @@
 coverage.out
 tom
+
+webgui-preact/logs
+webgui-preact/*.log
+webgui-preact/npm-debug.log*
+webgui-preact/yarn-debug.log*
+webgui-preact/yarn-error.log*
+webgui-preact/pnpm-debug.log*
+webgui-preact/lerna-debug.log*
+webgui-preact/node_modules
