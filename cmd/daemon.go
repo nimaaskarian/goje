@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -85,12 +84,14 @@ var daemonCmd = &cobra.Command{
 			go tcp_daemon.Run()
 		}
 		if http_address != "" {
-			clients := make(map[int]chan string)
+			clients := make(map[int]chan httpd.Event)
 			config.AfterTick = func(t *timer.Timer) {
 				afterTick(t)
-				bytes, _ := json.Marshal(t)
         for _, client := range clients {
-          client <- string(bytes)
+          client <- httpd.Event {
+            Name: "timer",
+            Payload: t,
+          }
         }
 			}
 			config.AfterSeek = config.AfterTick

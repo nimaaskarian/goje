@@ -5,11 +5,16 @@ import (
 	"github.com/nimaaskarian/tom/timer"
 )
 
+type Event struct {
+	Name    string
+	Payload any
+}
+
 type Daemon struct {
-	router        *gin.Engine
-	Timer         *timer.Timer
-	lastId        int
-	Clients       map[int]chan string
+	router  *gin.Engine
+	Timer   *timer.Timer
+	lastId  int
+	Clients map[int]chan Event
 }
 
 func (d *Daemon) Init() {

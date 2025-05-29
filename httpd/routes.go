@@ -27,16 +27,15 @@ func (d *Daemon) JsonRoutes() {
 		c.Header("Cache-Control", "no-cache")
 		c.Header("Connection", "keep-alive")
 		c.Header("Transfer-Encoding", "chunked")
-    client := make(chan string, 1)
-    d.lastId++;
-    id := d.lastId
-    d.Clients[id] = client
-    defer func() {
-      delete(d.Clients, id)
-    }()
+		client := make(chan Event, 1)
+		client <- Event{Payload: d.Timer, Name: "timer"}
+		d.lastId++
+		id := d.lastId
+		d.Clients[id] = client
+		defer delete(d.Clients, id)
 		c.Stream(func(w io.Writer) bool {
-			if timer, ok := <-client; ok {
-				c.SSEvent("timer", timer)
+			if event, ok := <-client; ok {
+				c.SSEvent(event.Name, event.Payload)
 				return true
 			}
 			return false
