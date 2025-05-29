@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,15 +16,16 @@ import (
 )
 
 const (
-	Pause    = "pause"
-	Seek     = "seek"
-	Reset    = "reset"
-	Next     = "next"
-	Prev     = "prev"
-	Skip     = "skip"
-	Init     = "init"
-	Timer    = "timer"
-	Commands = "commands"
+	Pause       = "pause"
+	Seek        = "seek"
+	Reset       = "reset"
+	Next        = "next"
+	Prev        = "prev"
+	Skip        = "skip"
+	Init        = "init"
+  Sessions    = "sessions"
+	Timer       = "timer"
+	Commands    = "commands"
 )
 
 type TooManyArgsError struct {
@@ -62,6 +64,8 @@ func ParseInput(timer *timer.Timer, input string) (string, string, error) {
 		out, err = prevModeCmd(timer, splited)
 	case Skip, Next:
 		out, err = nextModeCmd(timer, splited)
+  case Sessions:
+		out, err = sessionsCmd(timer, splited)
 	case Commands:
 		out, err = fmt.Sprintf(`command: %s
 command: %s
@@ -72,7 +76,8 @@ command: %s
 command: %s
 command: %s
 command: %s
-`, Pause, Seek, Reset, Init, Prev, Next, Skip, Timer, Commands), nil
+command: %s
+`, Pause, Seek, Reset, Init, Prev, Next, Skip, Sessions, Timer, Commands), nil
 	default:
 		out, err = "", errors.New(fmt.Sprintf("command not found %q", splited[0]))
 		cmd = ""
@@ -84,17 +89,49 @@ func pauseCmd(timer *timer.Timer, args []string) (string, error) {
 	switch len(args) {
 	case 1:
 		timer.Paused = !timer.Paused
-    timer.OnChange()
+		timer.OnChange()
 	case 2:
 		var err error
 		timer.Paused, err = parseBool(args[1])
 		if err != nil {
 			return "", err
 		} else {
-      timer.OnChange()
+			timer.OnChange()
 		}
 	default:
 		return "", TooManyArgsError{args[0]}
+	}
+	return "", nil
+}
+
+func sessionsCmd(timer *timer.Timer, args []string) (string, error) {
+	switch len(args) {
+	case 2:
+		var err error
+		if strings.HasPrefix(args[1], "+") || strings.HasPrefix(args[1], "-") {
+      var count uint64
+      count, err = strconv.ParseUint(args[1][1:], 10, 32)
+      if err == nil {
+        if args[1][0] == '+' {
+          timer.SessionCount += uint(count)
+        } else {
+          timer.SessionCount -= uint(count)
+        }
+      }
+    } else {
+      var count uint64
+      count, err = strconv.ParseUint(args[1], 10, 32)
+      if err == nil {
+        timer.SessionCount = uint(count)
+      }
+    }
+		if err != nil {
+			return "", err
+		} else {
+			timer.OnChange()
+		}
+	default:
+		return "", WrongNumberOfArgsError{args[0]}
 	}
 	return "", nil
 }
