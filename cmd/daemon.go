@@ -16,10 +16,10 @@ import (
 // server flags
 var (
 	tcp_address       string
-	json_address      string
+	http_address      string
 	buffsize          uint
 	should_print      bool
-	no_webgui      bool
+	no_webgui         bool
 	write_path        string
 	run_activitywatch bool
 )
@@ -50,7 +50,7 @@ func init() {
 		"duration of long break sections of the timer",
 	)
 	daemonCmd.PersistentFlags().StringVarP(&tcp_address, "tcp-address", "a", ":8088", "address:[port] for tcp pomodoro daemon")
-	daemonCmd.PersistentFlags().StringVarP(&json_address, "json-address", "j", "", "address:[port] for http json pomodoro daemon (doesn't run when empty)")
+	daemonCmd.PersistentFlags().StringVarP(&http_address, "http-address", "j", "", "address:[port] for http pomodoro api (doesn't run when empty)")
 	daemonCmd.PersistentFlags().BoolVar(&no_webgui, "no-webgui", false, "don't run webgui. webgui can't be run without the json server")
 	daemonCmd.PersistentFlags().UintVar(&buffsize, "buff-size", 1024, "size of buffer that messages are parsed with")
 	daemonCmd.PersistentFlags().BoolVar(&should_print, "print", false, "the daemon prints current duration to stderr on ticks when this option is present")
@@ -84,25 +84,27 @@ var daemonCmd = &cobra.Command{
 			}
 			go tcp_daemon.Run()
 		}
-		if json_address != "" {
-			timerchan := make(chan string)
+		if http_address != "" {
+			clients := make(map[int]chan string)
 			config.AfterTick = func(t *timer.Timer) {
 				afterTick(t)
 				bytes, _ := json.Marshal(t)
-				timerchan <- string(bytes)
+        for _, client := range clients {
+          client <- string(bytes)
+        }
 			}
 			config.AfterSeek = config.AfterTick
 			json_deamon := httpd.Daemon{
-				Timer: &tomato,
-        TimerJsonChan: timerchan,
+				Timer:         &tomato,
+        Clients: clients,
 			}
 			json_deamon.Init()
-      json_deamon.JsonRoutes()
-      if !no_webgui {
-        json_deamon.WebguiRoutes()
-      }
+			json_deamon.JsonRoutes()
+			if !no_webgui {
+				json_deamon.WebguiRoutes()
+			}
 			go func() {
-				if err := json_deamon.Run(json_address); err != nil {
+				if err := json_deamon.Run(http_address); err != nil {
 					log.Fatalln(err)
 				}
 			}()

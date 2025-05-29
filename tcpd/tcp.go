@@ -15,14 +15,15 @@ import (
 )
 
 const (
-	Pause     = "pause"
-	Seek      = "seek"
-	Reset     = "reset"
-	CycleMode = "cyclemode"
-	Skip      = "skip"
-	Init      = "init"
-	Timer     = "timer"
-	Commands  = "commands"
+	Pause    = "pause"
+	Seek     = "seek"
+	Reset    = "reset"
+	NextMode = "nextmode"
+	PrevMode = "prevmode"
+	Skip     = "skip"
+	Init     = "init"
+	Timer    = "timer"
+	Commands = "commands"
 )
 
 type TooManyArgsError struct {
@@ -57,9 +58,11 @@ func ParseInput(timer *timer.Timer, input string) (string, string, error) {
 		out, err = initCmd(timer, splited)
 	case Timer:
 		out, err = timerCmd(timer, splited)
-	case CycleMode:
+	case PrevMode:
+		out, err = prevModeCmd(timer, splited)
+	case NextMode:
 	case Skip:
-		out, err = cycleModeCmd(timer, splited)
+		out, err = nextModeCmd(timer, splited)
 	case Commands:
 		out, err = fmt.Sprintf(`command: %s
 command: %s
@@ -69,7 +72,8 @@ command: %s
 command: %s
 command: %s
 command: %s
-`, Pause, Seek, Reset, Init, CycleMode, Skip, Timer, Commands), nil
+command: %s
+`, Pause, Seek, Reset, Init, PrevMode, NextMode, Skip, Timer, Commands), nil
 	default:
 		out, err = "", errors.New(fmt.Sprintf("command not found %q", splited[0]))
 		cmd = ""
@@ -125,15 +129,26 @@ func resetCmd(timer *timer.Timer, args []string) (string, error) {
 	return "", nil
 }
 
-func cycleModeCmd(timer *timer.Timer, args []string) (string, error) {
+func nextModeCmd(timer *timer.Timer, args []string) (string, error) {
 	switch len(args) {
 	case 1:
-		timer.CycleMode()
+		timer.SwitchNextMode()
 	default:
 		return "", TooManyArgsError{args[0]}
 	}
 	return "", nil
 }
+
+func prevModeCmd(timer *timer.Timer, args []string) (string, error) {
+	switch len(args) {
+	case 1:
+		timer.SwitchPrevMode()
+	default:
+		return "", TooManyArgsError{args[0]}
+	}
+	return "", nil
+}
+
 
 func timerCmd(timer *timer.Timer, args []string) (string, error) {
 	switch len(args) {
@@ -143,10 +158,10 @@ func timerCmd(timer *timer.Timer, args []string) (string, error) {
 		var out string
 		for i := range timer_value.NumField() {
 			name := typ.Field(i).Name
-      if name[0] >= 'A' && name[0] <= 'Z' {
-        obj := timer_value.Field(i).Interface()
-        out += fmt.Sprintf("%s: %v\n", name, obj)
-      }
+			if name[0] >= 'A' && name[0] <= 'Z' {
+				obj := timer_value.Field(i).Interface()
+				out += fmt.Sprintf("%s: %v\n", name, obj)
+			}
 		}
 		return out, nil
 	case 2:
@@ -181,13 +196,13 @@ func parseBool(input string) (bool, error) {
 }
 
 type Daemon struct {
-	Timer   *timer.Timer
+	Timer    *timer.Timer
 	Listener net.Listener
 	Buffsize uint
 }
 
 func (d *Daemon) InitializeListener(address string) error {
-  var err error
+	var err error
 	d.Listener, err = net.Listen("tcp", address)
 	if err != nil {
 		return err

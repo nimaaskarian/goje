@@ -8,20 +8,20 @@ import (
 
 func TestCycleMode(t *testing.T) {
 	timer := Timer{
-		config: DefaultConfig,
+		Config: DefaultConfig,
   }
   timer.Init()
   for range 3 {
-    timer.CycleMode()
+    timer.SwitchNextMode()
     if timer.Mode != ShortBreak {
       t.Fatal("Failed cycle mode short break")
     }
-    timer.CycleMode()
+    timer.SwitchNextMode()
     if timer.Mode != Pomodoro {
       t.Fatal("Failed cycle mode to pomodoro")
     }
   }
-  timer.CycleMode()
+  timer.SwitchNextMode()
   if timer.Mode != LongBreak {
     t.Fatal("Failed cycle mode to long break", timer.Mode)
   }
@@ -32,7 +32,7 @@ func TestTick(t *testing.T) {
   config.DurationPerTick = time.Millisecond*10
 
 	timer := Timer{
-		config: config,
+		Config: config,
   }
   timer.Init()
   for i := range 5 {
@@ -49,7 +49,7 @@ func TestLoop(t *testing.T) {
   config.DurationPerTick = time.Millisecond*10
 
 	timer := Timer{
-		config: config,
+		Config: config,
   }
   timer.Init()
   go timer.Loop()
@@ -69,19 +69,19 @@ func TestTimer(t *testing.T) {
   config.Duration[LongBreak] = 5*config.DurationPerTick
 
 	timer := Timer{
-		config: config,
+		Config: config,
   }
   timer.Init()
   go timer.Loop()
-  time.Sleep(time.Millisecond*45)
+  time.Sleep(time.Millisecond*43)
   if timer.Mode != ShortBreak {
-    t.Fatalf("Didn't cycle mode to short break %s!=%s. time left %s", timer.Mode, ShortBreak, timer.String())
+    t.Fatalf("Didn't cycle mode to short break %s!=%s. time left %d", timer.Mode, ShortBreak, timer.Duration.Milliseconds())
   }
-  time.Sleep(time.Millisecond*20)
+  time.Sleep(time.Millisecond*23)
   if timer.Mode != Pomodoro {
     t.Fatalf("Didn't cycle mode to pomodoro %s!=%s. time left %s", timer.Mode, Pomodoro, timer.String())
   }
-  time.Sleep(time.Millisecond*45)
+  time.Sleep(time.Millisecond*43)
   if timer.Mode != LongBreak {
     t.Fatalf("Didn't cycle mode to long break %s!=%s. time left %s", timer.Mode, LongBreak, timer.String())
   }
@@ -89,14 +89,14 @@ func TestTimer(t *testing.T) {
 
 func ExampleTimer_String() {
 	timer := Timer{
-		config: DefaultConfig,
+		Config: DefaultConfig,
   }
   timer.Init()
   fmt.Println(timer.String())
-  timer.config.Duration[Pomodoro] = 3 * time.Hour + 8 * time.Minute + 10 * time.Second
+  timer.Config.Duration[Pomodoro] = 3 * time.Hour + 8 * time.Minute + 10 * time.Second
   timer.Init()
   fmt.Println(timer.String())
-  timer.config.Duration[Pomodoro] = 50 * time.Second
+  timer.Config.Duration[Pomodoro] = 50 * time.Second
   timer.Init()
   fmt.Println(timer.String())
   // Output:

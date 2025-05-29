@@ -2,7 +2,6 @@ package httpd
 
 import (
 	"embed"
-	"fmt"
 	"io"
 	"io/fs"
 	"net/http"
@@ -28,9 +27,15 @@ func (d *Daemon) JsonRoutes() {
 		c.Header("Cache-Control", "no-cache")
 		c.Header("Connection", "keep-alive")
 		c.Header("Transfer-Encoding", "chunked")
+    client := make(chan string, 1)
+    d.lastId++;
+    id := d.lastId
+    d.Clients[id] = client
+    defer func() {
+      delete(d.Clients, id)
+    }()
 		c.Stream(func(w io.Writer) bool {
-			if timer, ok := <-d.TimerJsonChan; ok {
-				fmt.Println(timer)
+			if timer, ok := <-client; ok {
 				c.SSEvent("timer", timer)
 				return true
 			}
@@ -42,8 +47,8 @@ func (d *Daemon) JsonRoutes() {
 func (d *Daemon) WebguiRoutes() {
 	static, _ := fs.Sub(embed_fs, "webgui-preact/dist/assets")
 	d.router.StaticFS("/assets", http.FS(static))
-	d.router.GET("/", func (c *gin.Context) {
-    data, _ := embed_fs.ReadFile("webgui-preact/dist/index.html")
-    c.Data(http.StatusOK, "text/html;  charset=utf-8", data)
-  })
+	d.router.GET("/", func(c *gin.Context) {
+		data, _ := embed_fs.ReadFile("webgui-preact/dist/index.html")
+		c.Data(http.StatusOK, "text/html;  charset=utf-8", data)
+	})
 }
