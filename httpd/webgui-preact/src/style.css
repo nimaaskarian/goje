@@ -1,1 +1,32 @@
 @import "tailwindcss";
+
+body {
+  font-family: monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  .circle {
+    background: conic-gradient(var(--color-white) 0%,
+        var(--color-white) var(--progress),
+        var(--color-zinc-600) var(--progress),
+        var(--color-zinc-600) 100%) !important;
+  }
+}
+
+.circle {
+  width: calc(var(--spacing)*52);
+  height: calc(var(--spacing)*52);
+  border-radius: 50%;
+  background: conic-gradient(var(--color-zinc-900) 0%,
+      var(--color-zinc-900) var(--progress),
+      var(--color-zinc-300) var(--progress),
+      var(--color-zinc-300) 100%);
+  position: relative;
+}
+
+.inner-circle {
+  width: calc(var(--spacing)*48);
+  height: calc(var(--spacing)*48);
+  position: relative;
+  border-radius: 50%;
+}

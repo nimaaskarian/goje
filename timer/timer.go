@@ -16,9 +16,9 @@ const (
 type TimerConfig struct {
 	SessionCount    uint
 	Duration        [MODE_MAX]time.Duration
-	OnModeEnd       [MODE_MAX]func(*Timer)
-	OnModeStart     [MODE_MAX]func(*Timer)
-	OnChange     func(*Timer)
+	OnModeEnd       [MODE_MAX]func(*Timer) `json:"-"`
+	OnModeStart     [MODE_MAX]func(*Timer) `json:"-"`
+	OnChange        func(*Timer) `json:"-"`
 	Paused          bool
 	DurationPerTick time.Duration
 }
@@ -35,7 +35,7 @@ var DefaultConfig = TimerConfig{
 }
 
 type Timer struct {
-	Config       TimerConfig `json:"-"`
+	Config       TimerConfig
 	Duration     time.Duration
 	Mode         TimerMode
 	SessionCount uint
@@ -65,7 +65,7 @@ func (t *Timer) OnChange() {
 
 func (t *Timer) SeekTo(duration time.Duration) {
 	t.Duration = duration
-  t.OnChange()
+	t.OnChange()
 }
 
 func (t *Timer) SeekAdd(duration time.Duration) {
@@ -92,7 +92,7 @@ func (t *Timer) tick() {
 		return
 	}
 	t.Duration -= t.Config.DurationPerTick
-  t.OnChange()
+	t.OnChange()
 }
 
 // Halts the current thread for ever. Use in a go routine.
