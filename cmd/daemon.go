@@ -53,7 +53,7 @@ func init() {
 	daemonCmd.PersistentFlags().BoolVar(&no_webgui, "no-webgui", false, "don't run webgui. webgui can't be run without the json server")
 	daemonCmd.PersistentFlags().UintVar(&buffsize, "buff-size", 1024, "size of buffer that messages are parsed with")
 	daemonCmd.PersistentFlags().BoolVar(&should_print, "print", false, "the daemon prints current duration to stderr on ticks when this option is present")
-	daemonCmd.PersistentFlags().BoolVarP(&run_activitywatch, "activitywatch", "w", false, "activitywatch port. doesn't send pomodoro data to activitywatch if is empty")
+	daemonCmd.PersistentFlags().BoolVarP(&run_activitywatch, "activitywatch", "w", false, "daemon send's pomodoro data to activitywatch if is present")
 	daemonCmd.PersistentFlags().StringVar(&write_path, "write-file", "", "write last timer in a file at given path. empty means no write")
 }
 

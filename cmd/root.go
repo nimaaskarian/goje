@@ -9,7 +9,7 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "tom",
-	Short: "tom is a server-client pomodoro timer",
+	Short: "a server-client pomodoro timer",
 	Long: "tom is a mpd-like, client server pomodoro timer with modern features",
 }
 
