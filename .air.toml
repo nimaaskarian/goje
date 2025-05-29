@@ -1,0 +1,16 @@
+root = "."
+
+[build]
+bin = "./tom daemon --http-address :8089"
+cmd = "make"
+delay = 1000
+exclude_dir = ["./httpd/webgui-preact/node_modules"]
+exclude_unchanged = false
+include_ext = ["go", "html", "jsx", "css"]
+kill_delay = "0s"
+
+[color]
+build = "yellow"
+main = "magenta"
+runner = "green"
+watcher = "cyan"

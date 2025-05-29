@@ -10,11 +10,26 @@ type Event struct {
 	Payload any
 }
 
+type ClientsMap map[uint]chan Event
+
 type Daemon struct {
 	router  *gin.Engine
 	Timer   *timer.Timer
-	lastId  int
-	Clients map[int]chan Event
+	lastId  uint
+	Clients ClientsMap
+}
+
+func (d *Daemon) TimerEvent() Event {
+  return Event {
+    Name: "timer",
+    Payload: d.Timer,
+  }
+}
+
+func (d *Daemon) UpdateClients(e Event) {
+  for _, client := range d.Clients {
+    client <- e
+  }
 }
 
 func (d *Daemon) Init() {

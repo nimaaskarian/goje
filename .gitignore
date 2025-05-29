@@ -10,3 +10,4 @@ httpd/webgui-preact/pnpm-debug.log*
 httpd/webgui-preact/lerna-debug.log*
 httpd/webgui-preact/node_modules/
 httpd/webgui-preact/dist/
+tmp/

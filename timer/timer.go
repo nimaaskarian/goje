@@ -18,8 +18,8 @@ type TimerConfig struct {
 	Duration        [MODE_MAX]time.Duration
 	OnModeEnd       [MODE_MAX]func(*Timer)
 	OnModeStart     [MODE_MAX]func(*Timer)
-	AfterTick          func(*Timer)
-	AfterSeek          func(*Timer)
+	AfterTick       func(*Timer)
+	AfterSeek       func(*Timer)
 	Paused          bool
 	DurationPerTick time.Duration
 }
@@ -36,7 +36,7 @@ var DefaultConfig = TimerConfig{
 }
 
 type Timer struct {
-  Config       TimerConfig `json:"-"`
+	Config       TimerConfig `json:"-"`
 	Duration     time.Duration
 	Mode         TimerMode
 	SessionCount uint
@@ -44,25 +44,25 @@ type Timer struct {
 }
 
 func (t *Timer) Reset() {
-  t.SeekTo(t.Config.Duration[t.Mode])
+	t.SeekTo(t.Config.Duration[t.Mode])
 }
 
 func (t *Timer) SetConfig(config TimerConfig) {
-  t.Config = config
+	t.Config = config
 }
 
 func (t *Timer) Init() {
 	t.Mode = Pomodoro
 	t.SessionCount = t.Config.SessionCount
 	t.Paused = t.Config.Paused
-  t.Reset()
+	t.Reset()
 }
 
 func (t *Timer) SeekTo(duration time.Duration) {
 	t.Duration = duration
-  if t.Config.AfterSeek != nil {
-    t.Config.AfterSeek(t)
-  }
+	if t.Config.AfterSeek != nil {
+		t.Config.AfterSeek(t)
+	}
 }
 
 func (t *Timer) SeekAdd(duration time.Duration) {
@@ -76,15 +76,15 @@ func (t *Timer) SeekAdd(duration time.Duration) {
 
 func (t *Timer) tick() {
 	if t.Duration <= 0 {
-    if t.Config.OnModeEnd[t.Mode] != nil {
-      t.Config.OnModeEnd[t.Mode](t)
-    }
-    t.SwitchNextMode()
-    if t.Config.OnModeStart[t.Mode] != nil {
-      t.Config.OnModeStart[t.Mode](t)
-    }
+		if t.Config.OnModeEnd[t.Mode] != nil {
+			t.Config.OnModeEnd[t.Mode](t)
+		}
+		t.SwitchNextMode()
+		if t.Config.OnModeStart[t.Mode] != nil {
+			t.Config.OnModeStart[t.Mode](t)
+		}
 	}
-  time.Sleep(t.Config.DurationPerTick)
+	time.Sleep(t.Config.DurationPerTick)
 	if t.Paused {
 		return
 	}
@@ -115,18 +115,18 @@ func (t *Timer) SwitchNextMode() {
 	case ShortBreak:
 		t.Mode = Pomodoro
 	}
-  t.Duration = t.Config.Duration[t.Mode]
+	t.Duration = t.Config.Duration[t.Mode]
 }
 
 func (t *Timer) SwitchPrevMode() {
 	switch t.Mode {
 	case Pomodoro:
-  if t.SessionCount == t.Config.SessionCount {
-    t.SessionCount = 0
-    t.Mode=LongBreak
-  } else {
-    t.Mode=ShortBreak
-  }
+		if t.SessionCount >= t.Config.SessionCount {
+			t.SessionCount = 0
+			t.Mode = LongBreak
+		} else {
+			t.Mode = ShortBreak
+		}
 	case LongBreak:
 		t.SessionCount++
 		t.Mode = Pomodoro
@@ -134,7 +134,7 @@ func (t *Timer) SwitchPrevMode() {
 		t.SessionCount++
 		t.Mode = Pomodoro
 	}
-  t.Duration = t.Config.Duration[t.Mode]
+	t.Duration = t.Config.Duration[t.Mode]
 }
 
 func (t *Timer) String() string {

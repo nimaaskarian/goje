@@ -84,21 +84,15 @@ var daemonCmd = &cobra.Command{
 			go tcp_daemon.Run()
 		}
 		if http_address != "" {
-			clients := make(map[int]chan httpd.Event)
+			json_deamon := httpd.Daemon{
+				Timer: &tomato,
+        Clients: make(httpd.ClientsMap),
+			}
 			config.AfterTick = func(t *timer.Timer) {
 				afterTick(t)
-        for _, client := range clients {
-          client <- httpd.Event {
-            Name: "timer",
-            Payload: t,
-          }
-        }
+				json_deamon.UpdateClients(json_deamon.TimerEvent())
 			}
 			config.AfterSeek = config.AfterTick
-			json_deamon := httpd.Daemon{
-				Timer:         &tomato,
-        Clients: clients,
-			}
 			json_deamon.Init()
 			json_deamon.JsonRoutes()
 			if !no_webgui {
