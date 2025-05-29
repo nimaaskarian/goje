@@ -18,8 +18,8 @@ const (
 	Pause    = "pause"
 	Seek     = "seek"
 	Reset    = "reset"
-	NextMode = "nextmode"
-	PrevMode = "prevmode"
+	Next     = "next"
+	Prev     = "prev"
 	Skip     = "skip"
 	Init     = "init"
 	Timer    = "timer"
@@ -58,10 +58,9 @@ func ParseInput(timer *timer.Timer, input string) (string, string, error) {
 		out, err = initCmd(timer, splited)
 	case Timer:
 		out, err = timerCmd(timer, splited)
-	case PrevMode:
+	case Prev:
 		out, err = prevModeCmd(timer, splited)
-	case NextMode:
-	case Skip:
+	case Skip, Next:
 		out, err = nextModeCmd(timer, splited)
 	case Commands:
 		out, err = fmt.Sprintf(`command: %s
@@ -73,7 +72,7 @@ command: %s
 command: %s
 command: %s
 command: %s
-`, Pause, Seek, Reset, Init, PrevMode, NextMode, Skip, Timer, Commands), nil
+`, Pause, Seek, Reset, Init, Prev, Next, Skip, Timer, Commands), nil
 	default:
 		out, err = "", errors.New(fmt.Sprintf("command not found %q", splited[0]))
 		cmd = ""
@@ -85,11 +84,14 @@ func pauseCmd(timer *timer.Timer, args []string) (string, error) {
 	switch len(args) {
 	case 1:
 		timer.Paused = !timer.Paused
+    timer.OnChange()
 	case 2:
 		var err error
 		timer.Paused, err = parseBool(args[1])
 		if err != nil {
 			return "", err
+		} else {
+      timer.OnChange()
 		}
 	default:
 		return "", TooManyArgsError{args[0]}
@@ -148,7 +150,6 @@ func prevModeCmd(timer *timer.Timer, args []string) (string, error) {
 	}
 	return "", nil
 }
-
 
 func timerCmd(timer *timer.Timer, args []string) (string, error) {
 	switch len(args) {

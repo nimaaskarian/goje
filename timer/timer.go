@@ -18,8 +18,7 @@ type TimerConfig struct {
 	Duration        [MODE_MAX]time.Duration
 	OnModeEnd       [MODE_MAX]func(*Timer)
 	OnModeStart     [MODE_MAX]func(*Timer)
-	AfterTick       func(*Timer)
-	AfterSeek       func(*Timer)
+	OnChange     func(*Timer)
 	Paused          bool
 	DurationPerTick time.Duration
 }
@@ -58,11 +57,15 @@ func (t *Timer) Init() {
 	t.Reset()
 }
 
+func (t *Timer) OnChange() {
+	if t.Config.OnChange != nil {
+		t.Config.OnChange(t)
+	}
+}
+
 func (t *Timer) SeekTo(duration time.Duration) {
 	t.Duration = duration
-	if t.Config.AfterSeek != nil {
-		t.Config.AfterSeek(t)
-	}
+  t.OnChange()
 }
 
 func (t *Timer) SeekAdd(duration time.Duration) {
@@ -89,9 +92,7 @@ func (t *Timer) tick() {
 		return
 	}
 	t.Duration -= t.Config.DurationPerTick
-	if t.Config.AfterTick != nil {
-		t.Config.AfterTick(t)
-	}
+  t.OnChange()
 }
 
 // Halts the current thread for ever. Use in a go routine.
@@ -115,7 +116,7 @@ func (t *Timer) SwitchNextMode() {
 	case ShortBreak:
 		t.Mode = Pomodoro
 	}
-	t.Duration = t.Config.Duration[t.Mode]
+	t.SeekTo(t.Config.Duration[t.Mode])
 }
 
 func (t *Timer) SwitchPrevMode() {
@@ -134,7 +135,7 @@ func (t *Timer) SwitchPrevMode() {
 		t.SessionCount++
 		t.Mode = Pomodoro
 	}
-	t.Duration = t.Config.Duration[t.Mode]
+	t.SeekTo(t.Config.Duration[t.Mode])
 }
 
 func (t *Timer) String() string {

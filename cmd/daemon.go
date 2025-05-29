@@ -67,8 +67,7 @@ var daemonCmd = &cobra.Command{
 	Use:   "daemon",
 	Short: "run a pomodoro tcp daemon",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		config.AfterTick = afterTick
-		config.AfterSeek = config.AfterTick
+		config.OnChange = afterTick
 		if run_activitywatch {
 			activitywatch.SetupTimerConfig(&config)
 		}
@@ -88,11 +87,10 @@ var daemonCmd = &cobra.Command{
 				Timer: &tomato,
         Clients: make(httpd.ClientsMap),
 			}
-			config.AfterTick = func(t *timer.Timer) {
+			config.OnChange = func(t *timer.Timer) {
 				afterTick(t)
 				json_deamon.UpdateClients(json_deamon.TimerEvent())
 			}
-			config.AfterSeek = config.AfterTick
 			json_deamon.Init()
 			json_deamon.JsonRoutes()
 			if !no_webgui {
