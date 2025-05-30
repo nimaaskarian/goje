@@ -1,6 +1,8 @@
 package httpd
 
 import (
+	"sync"
+
 	"github.com/gin-gonic/gin"
 	"github.com/nimaaskarian/goje/timer"
 )
@@ -10,13 +12,14 @@ type Event struct {
 	Payload any
 }
 
-type ClientsMap map[uint]chan Event
+type ClientsMap *sync.Map
 
 type Daemon struct {
-	router  *gin.Engine
-	Timer   *timer.Timer
-	lastId  uint
-	Clients ClientsMap
+	router       *gin.Engine
+	Timer        *timer.Timer
+	lastId       uint
+	ClosingIds   chan uint
+	Clients      *sync.Map
 }
 
 func (d *Daemon) TimerEvent() Event {
@@ -27,9 +30,16 @@ func (d *Daemon) TimerEvent() Event {
 }
 
 func (d *Daemon) UpdateClients(e Event) {
-	for _, client := range d.Clients {
+  d.Clients.Range(func(id any, value any) (closed bool) {
+    client := value.(chan Event)
+		defer func() {
+			if recover() != nil {
+				closed = false
+			}
+		}()
 		client <- e
-	}
+    return true
+  })
 }
 
 func (d *Daemon) Init() {

@@ -4,6 +4,7 @@ import (
 	"embed"
 	"io"
 	"io/fs"
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -40,13 +41,21 @@ func (d *Daemon) JsonRoutes() {
       c.JSON(http.StatusOK, d.Timer)
     }
 	})
-	d.router.GET("/api/timer/stream", SSEMiddleware, func(c *gin.Context) {
+	d.router.GET("/api/timer/stream", func(c *gin.Context) {
+    slog.SetLogLoggerLevel(slog.LevelDebug)
+    c.Header("Content-Type", "text/event-stream")
+    c.Header("Cache-Control", "no-cache")
+    c.Header("Connection", "keep-alive")
+    c.Header("Transfer-Encoding", "chunked")
 		client := make(chan Event, 1)
 		client <- Event{Payload: d.Timer, Name: "timer"}
 		d.lastId++
 		id := d.lastId
-		d.Clients[id] = client
-		defer delete(d.Clients, id)
+		d.Clients.Store(id, client)
+		defer func() {
+      d.Clients.Delete(id)
+      close(client)
+    }()
 		c.Stream(func(w io.Writer) bool {
 			if event, ok := <-client; ok {
 				c.SSEvent(event.Name, event.Payload)
@@ -55,13 +64,6 @@ func (d *Daemon) JsonRoutes() {
 			return false
 		})
 	})
-}
-
-func SSEMiddleware(c *gin.Context) {
-  c.Header("Content-Type", "text/event-stream")
-  c.Header("Cache-Control", "no-cache")
-  c.Header("Connection", "keep-alive")
-  c.Header("Transfer-Encoding", "chunked")
 }
 
 func (d *Daemon) WebguiRoutes() {

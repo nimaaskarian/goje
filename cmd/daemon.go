@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/nimaaskarian/goje/activitywatch"
 	"github.com/nimaaskarian/goje/httpd"
@@ -96,7 +97,7 @@ var daemonCmd = &cobra.Command{
 		if config.HttpAddress != "" {
 			json_deamon := httpd.Daemon{
 				Timer:   &tomato,
-				Clients: make(httpd.ClientsMap),
+				Clients: &sync.Map{},
 			}
 			config.Timer.OnChange = func(t *timer.Timer) {
 				afterTick(t)
