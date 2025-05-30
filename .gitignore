@@ -1,6 +1,4 @@
 coverage.out
-tom
-
 httpd/webgui-preact/logs
 httpd/webgui-preact/*.log
 httpd/webgui-preact/npm-debug.log*
@@ -12,3 +10,4 @@ httpd/webgui-preact/node_modules/
 httpd/webgui-preact/dist/
 tmp/
 goje
+goje.exe
