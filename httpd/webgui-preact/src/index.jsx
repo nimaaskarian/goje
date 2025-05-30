@@ -20,7 +20,7 @@ export function App() {
         <a href="" class="absolute top-4 right-4 p-2 rounded dark:bg-zinc-800 bg-white shadow-sm hover:shadow-md transition ease-in-out duration-150">
           {cog_icon}
         </a>
-        <div class="w-60 text-center flex flex-col gap-4">
+        <div class="min-w-60 text-center flex flex-col gap-4">
           <div class="dark:bg-zinc-800 bg-white rounded-lg p-4 flex gap-4 flex-col shadow-sm hover:shadow-md transition ease-in-out duration-150">
             <ModeSelection timer={timer} />
             <div class="flex flex-row justify-center gap-2">
@@ -62,7 +62,7 @@ function TimerCircle(props) {
   return (
     <div class="circle flex justify-center items-center" id="timer-circle" style={{ "--progress": progress }}>
       <div class="inner-circle flex justify-center items-center bg-white dark:bg-zinc-800">
-        <Timer timer={props.timer} class="text-2xl font-bold" />
+        <Timer timer={props.timer} />
       </div>
     </div>
   );
@@ -94,30 +94,25 @@ function Timer(props) {
     if (props.timer.Config.DurationPerTick < 1E9) {
       fraclen = Math.log10(1E9/props.timer.Config.DurationPerTick + 1) >> 0
       const fraction_value = (props.timer.Duration % 1E9) / props.timer.Config.DurationPerTick
-      console.log(fraction_value)
       fraction = `.${String(fraction_value).padStart(fraclen, '0')}`
     }
     let seconds = (props.timer.Duration / 1E9 >> 0);
     let minutes = (seconds / 60 >> 0)
     seconds = seconds % 60
-    let hours = (minutes / 60 >> 0)
+    let hours_value = (minutes / 60 >> 0)
+    let hours = ""
+    if (hours_value !== 0) {
+      hours = String(hours_value).padStart(2, '0')+':'
+    }
     minutes = minutes % 60
     return [fraction,seconds, minutes, hours]
   }, [props.timer.Duration, props.timer.Config.DurationPerTick])
 
-  if (hours !== 0) {
-    return (
-      <div class={props.class}>
-        {String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}{fraction}
-      </div>
-    );
-  } else {
-    return (
-      <div class={props.class}>
-        {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}{fraction}
-      </div>
-    );
-  }
+  return (
+    <div  class="text-2xl font-bold">
+      {hours}{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}{fraction}
+    </div>
+  );
 }
 
 function modeString(mode) {
