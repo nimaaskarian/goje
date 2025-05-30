@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/nimaaskarian/tom/activitywatch"
 	"github.com/nimaaskarian/tom/httpd"
 	"github.com/nimaaskarian/tom/tcpd"
 	"github.com/nimaaskarian/tom/timer"
+	"github.com/nimaaskarian/tom/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -48,8 +50,8 @@ func init() {
 		timer.DefaultConfig.Duration[timer.LongBreak],
 		"duration of long break sections of the timer",
 	)
-	daemonCmd.PersistentFlags().StringVarP(&tcp_address, "tcp-address", "a", ":8088", "address:[port] for tcp pomodoro daemon")
-	daemonCmd.PersistentFlags().StringVarP(&http_address, "http-address", "j", "", "address:[port] for http pomodoro api (doesn't run when empty)")
+	daemonCmd.PersistentFlags().StringVarP(&tcp_address, "tcp-address", "a", "localhost:7800", "address:[port] for tcp pomodoro daemon (doesn't run when empty)")
+  daemonCmd.PersistentFlags().StringVarP(&http_address, "http-address", "A", "localhost:7900", "address:[port] for http pomodoro api (doesn't run when empty)")
 	daemonCmd.PersistentFlags().BoolVar(&no_webgui, "no-webgui", false, "don't run webgui. webgui can't be run without the json server")
 	daemonCmd.PersistentFlags().UintVar(&buffsize, "buff-size", 1024, "size of buffer that messages are parsed with")
 	daemonCmd.PersistentFlags().BoolVar(&should_print, "print", false, "the daemon prints current duration to stderr on ticks when this option is present")
@@ -94,6 +96,15 @@ var daemonCmd = &cobra.Command{
 			json_deamon.Init()
 			json_deamon.JsonRoutes()
 			if !no_webgui {
+        if strings.HasPrefix(http_address, "http://") {
+          utils.OpenURL(http_address)
+        } else {
+          if strings.HasPrefix(":", http_address) {
+            utils.OpenURL("http://localhost" + http_address)
+          } else {
+            utils.OpenURL("http://" + http_address)
+          }
+        }
 				json_deamon.WebguiRoutes()
 			}
 			go func() {

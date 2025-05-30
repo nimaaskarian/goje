@@ -1,7 +1,7 @@
 root = "."
 
 [build]
-bin = "./tom daemon --http-address :8089"
+bin = "./tom daemon"
 cmd = "make"
 delay = 1000
 exclude_dir = ["./httpd/webgui-preact/node_modules"]
