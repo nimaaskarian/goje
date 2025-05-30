@@ -3,30 +3,32 @@
 body {
   font-family: monospace;
 }
+:root {
+  --circle-fg: var(--color-zinc-900);
+  --circle-bg: var(--color-zinc-200);
+}
 
 @media (prefers-color-scheme: dark) {
-  .circle {
-    background: conic-gradient(var(--color-white) 0%,
-        var(--color-white) var(--progress),
-        var(--color-zinc-600) var(--progress),
-        var(--color-zinc-600) 100%) !important;
+  :root {
+    --circle-fg: var(--color-white);
+    --circle-bg: var(--color-zinc-700);
   }
 }
 
 .circle {
-  width: calc(var(--spacing)*52);
-  height: calc(var(--spacing)*52);
+  width: 100%;
+  aspect-ratio: 1/1;
   border-radius: 50%;
-  background: conic-gradient(var(--color-zinc-900) 0%,
-      var(--color-zinc-900) var(--progress),
-      var(--color-zinc-300) var(--progress),
-      var(--color-zinc-300) 100%);
+  background: conic-gradient(var(--circle-fg) 0%,
+      var(--circle-fg) var(--progress),
+      var(--circle-bg) var(--progress),
+      var(--circle-bg) 100%);
   position: relative;
 }
 
 .inner-circle {
-  width: calc(var(--spacing)*48);
-  height: calc(var(--spacing)*48);
+  width: calc(100% - var(--spacing)*4);
+  aspect-ratio: 1/1;
   position: relative;
   border-radius: 50%;
 }

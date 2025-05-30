@@ -31,7 +31,11 @@ func (d *Daemon) JsonRoutes() {
 	})
 	d.router.POST("/api/timer", func(c *gin.Context) {
 		c.Header("Cache-Control", "no-cache")
+    prev_mode := d.Timer.Mode
     if err := c.BindJSON(d.Timer); err == nil {
+      if prev_mode != d.Timer.Mode {
+        d.Timer.Duration = d.Timer.Config.Duration[d.Timer.Mode]
+      }
       d.UpdateClients(d.TimerEvent())
       c.JSON(http.StatusOK, d.Timer)
     }
