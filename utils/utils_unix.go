@@ -4,7 +4,9 @@
 package utils
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"syscall"
 )
 
@@ -14,4 +16,12 @@ func OpenURL(url string) error {
 		Setpgid: true,
 	}
 	return cmd.Run()
+}
+
+func ConfigDir() string {
+	base := os.Getenv("XDG_CONFIG_HOME")
+	if base == "" {
+		base = filepath.Join(os.Getenv("HOME"), ".config")
+	}
+	return filepath.Join(base, "goje")
 }

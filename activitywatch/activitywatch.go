@@ -1,13 +1,13 @@
 package activitywatch
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/nimaaskarian/aw-go"
 	"github.com/nimaaskarian/goje/timer"
 )
 
-const BUCKET_ID = "aw-watcher-tom_nimas-pc"
 const EVENT_TYPE = "pomodoro_status"
 
 func SetupTimerConfig(config * timer.TimerConfig) {
@@ -17,10 +17,11 @@ func SetupTimerConfig(config * timer.TimerConfig) {
 			Hostname: "127.0.0.1",
 			Port:     "5600",
 		},
-		ClientName: "tom-pomodoro-watcher",
+		ClientName: "goje-pomodoro-watcher",
 	}
 	client.Init()
-  client.CreateBucket(BUCKET_ID, EVENT_TYPE)
+  bucket_id := fmt.Sprintf("aw-watcher-goje_%s", client.ClientHostname)
+  client.CreateBucket(bucket_id, EVENT_TYPE)
 	for mode := range timer.MODE_MAX {
 		config.OnModeEnd[mode] = func(t *timer.Timer) {
 			duration := config.Duration[mode]
@@ -34,7 +35,7 @@ func SetupTimerConfig(config * timer.TimerConfig) {
 					"title": mode_string,
 				},
 			}
-			client.InsertEvent(BUCKET_ID, event)
+			client.InsertEvent(bucket_id, event)
 		}
 	}
 }

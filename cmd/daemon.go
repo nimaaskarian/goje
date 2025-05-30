@@ -12,51 +12,57 @@ import (
 	"github.com/nimaaskarian/goje/timer"
 	"github.com/nimaaskarian/goje/utils"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // server flags
-var (
-	tcp_address       string
-	http_address      string
-	buffsize          uint
-	should_print      bool
-	no_webgui         bool
-	write_path        string
-	run_activitywatch bool
-)
+type DaemonConfig struct {
+	TcpAddress    string `mapstructure:"tcp-address"`
+	HttpAddress   string `mapstructure:"http-address"`
+	BuffSize      uint   `mapstructure:"buff-size"`
+	Print         bool
+	NoWebgui      bool   `mapstructure:"no-webgui"`
+	WritePath     string `mapstructure:"write-path"`
+	Activitywatch bool
+	Timer   timer.TimerConfig
+}
 
-var config = timer.DefaultConfig
+var config = DaemonConfig{Timer: timer.DefaultConfig}
 
 func init() {
 	rootCmd.AddCommand(daemonCmd)
 	daemonCmd.PersistentFlags().DurationVarP(
-		&config.Duration[timer.Pomodoro],
+		&config.Timer.Duration[timer.Pomodoro],
 		"pomodoro-duration",
 		"p",
 		timer.DefaultConfig.Duration[timer.Pomodoro],
 		"duration of pomodoro sections of the timer",
 	)
 	daemonCmd.PersistentFlags().DurationVarP(
-		&config.Duration[timer.ShortBreak],
+		&config.Timer.Duration[timer.ShortBreak],
 		"short-break-duration",
 		"s",
 		timer.DefaultConfig.Duration[timer.ShortBreak],
 		"duration of short break sections of the timer",
 	)
 	daemonCmd.PersistentFlags().DurationVarP(
-		&config.Duration[timer.LongBreak],
+		&config.Timer.Duration[timer.LongBreak],
 		"long-break-duration",
 		"l",
 		timer.DefaultConfig.Duration[timer.LongBreak],
 		"duration of long break sections of the timer",
 	)
-	daemonCmd.PersistentFlags().StringVarP(&tcp_address, "tcp-address", "a", "localhost:7800", "address:[port] for tcp pomodoro daemon (doesn't run when empty)")
-  daemonCmd.PersistentFlags().StringVarP(&http_address, "http-address", "A", "localhost:7900", "address:[port] for http pomodoro api (doesn't run when empty)")
-	daemonCmd.PersistentFlags().BoolVar(&no_webgui, "no-webgui", false, "don't run webgui. webgui can't be run without the json server")
-	daemonCmd.PersistentFlags().UintVar(&buffsize, "buff-size", 1024, "size of buffer that messages are parsed with")
-	daemonCmd.PersistentFlags().BoolVar(&should_print, "print", false, "the daemon prints current duration to stderr on ticks when this option is present")
-	daemonCmd.PersistentFlags().BoolVarP(&run_activitywatch, "activitywatch", "w", false, "daemon send's pomodoro data to activitywatch if is present")
-	daemonCmd.PersistentFlags().StringVar(&write_path, "write-file", "", "write last timer in a file at given path. empty means no write")
+	viper.SetDefault("tcp-address", "localhost:7800")
+	viper.SetDefault("http-address", "localhost:7900")
+	viper.SetDefault("buff-size", 1024)
+	daemonCmd.PersistentFlags().StringVarP(&config.TcpAddress, "tcp-address", "a", "", "address:[port] for tcp pomodoro daemon (doesn't run when empty)")
+	daemonCmd.PersistentFlags().StringVarP(&config.HttpAddress, "http-address", "A", "", "address:[port] for http pomodoro api (doesn't run when empty)")
+	daemonCmd.PersistentFlags().BoolVar(&config.NoWebgui, "no-webgui", false, "don't run webgui. webgui can't be run without the json server")
+	daemonCmd.PersistentFlags().UintVar(&config.BuffSize, "buff-size", 0, "size of buffer that messages are parsed with")
+	daemonCmd.PersistentFlags().BoolVar(&config.Print, "print", false, "the daemon prints current duration to stderr on ticks when this option is present")
+	daemonCmd.PersistentFlags().BoolVarP(&config.Activitywatch, "activitywatch", "w", false, "daemon send's pomodoro data to activitywatch if is present")
+	daemonCmd.PersistentFlags().StringVar(&config.WritePath, "write-file", "", "write last timer in a file at given path. empty means no write")
+	viper.BindPFlags(daemonCmd.PersistentFlags())
 }
 
 var daemonCmd = &cobra.Command{
@@ -68,52 +74,55 @@ var daemonCmd = &cobra.Command{
 	},
 	Use:   "daemon",
 	Short: "run a pomodoro tcp daemon",
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return viper.Unmarshal(&config)
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		config.OnChange = afterTick
-		if run_activitywatch {
-			activitywatch.SetupTimerConfig(&config)
+		config.Timer.OnChange = afterTick
+		if config.Activitywatch {
+			activitywatch.SetupTimerConfig(&config.Timer)
 		}
 		tomato := timer.Timer{}
-		if tcp_address != "" {
+		if config.TcpAddress != "" {
 			tcp_daemon := tcpd.Daemon{
 				Timer:    &tomato,
-				Buffsize: buffsize,
+				Buffsize: config.BuffSize,
 			}
-			if err := tcp_daemon.InitializeListener(tcp_address); err != nil {
+			if err := tcp_daemon.InitializeListener(config.TcpAddress); err != nil {
 				return err
 			}
 			go tcp_daemon.Run()
 		}
-		if http_address != "" {
+		if config.HttpAddress != "" {
 			json_deamon := httpd.Daemon{
-				Timer: &tomato,
-        Clients: make(httpd.ClientsMap),
+				Timer:   &tomato,
+				Clients: make(httpd.ClientsMap),
 			}
-			config.OnChange = func(t *timer.Timer) {
+			config.Timer.OnChange = func(t *timer.Timer) {
 				afterTick(t)
 				json_deamon.UpdateClients(json_deamon.TimerEvent())
 			}
 			json_deamon.Init()
 			json_deamon.JsonRoutes()
-			if !no_webgui {
-        if strings.HasPrefix(http_address, "http://") {
-          utils.OpenURL(http_address)
-        } else {
-          if strings.HasPrefix(":", http_address) {
-            utils.OpenURL("http://localhost" + http_address)
-          } else {
-            utils.OpenURL("http://" + http_address)
-          }
-        }
+			if !config.NoWebgui {
+				if strings.HasPrefix(config.HttpAddress, "http://") {
+					utils.OpenURL(config.HttpAddress)
+				} else {
+					if config.HttpAddress[0] == ':' {
+						utils.OpenURL("http://localhost" + config.HttpAddress)
+					} else {
+						utils.OpenURL("http://" + config.HttpAddress)
+					}
+				}
 				json_deamon.WebguiRoutes()
 			}
 			go func() {
-				if err := json_deamon.Run(http_address); err != nil {
+				if err := json_deamon.Run(config.HttpAddress); err != nil {
 					log.Fatalln(err)
 				}
 			}()
 		}
-		tomato.SetConfig(config)
+		tomato.SetConfig(config.Timer)
 		tomato.Init()
 		tomato.Loop()
 		return nil
@@ -121,11 +130,11 @@ var daemonCmd = &cobra.Command{
 }
 
 func afterTick(timer *timer.Timer) {
-	if should_print {
+	if config.Print {
 		fmt.Fprintln(os.Stderr, timer)
 	}
-	if write_path != "" {
-		if err := os.WriteFile(write_path, []byte(timer.String()), 0644); err != nil {
+	if config.WritePath != "" {
+		if err := os.WriteFile(config.WritePath, []byte(timer.String()), 0644); err != nil {
 			log.Fatalln(err)
 		}
 	}

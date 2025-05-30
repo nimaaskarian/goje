@@ -1,5 +1,5 @@
 import { render } from 'preact';
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
 
 import './style.css';
 
@@ -23,7 +23,7 @@ export function App() {
         </a>
         <div class="w-60 text-center flex flex-col gap-4">
           <div class="dark:bg-zinc-800 bg-white rounded-lg p-4 flex gap-4 flex-col shadow-sm hover:shadow-md transition ease-in-out duration-150">
-            <ModeSelection mode={timer.Mode} onChange={(mode)=> {timer.Mode = mode; postTimer(timer)}}/>
+            <ModeSelection timer={timer} />
             <div class="flex flex-row justify-center gap-2">
               <button title="-1 sessions" aria-label="Substract from sessions" class="cursor-pointer" onClick={() => { timer.SessionCount--; postTimer(timer); }}>
                 {minus_icon}
@@ -54,16 +54,14 @@ export function App() {
 }
 
 function TimerCircle(props) {
-  useEffect(() => {
+  const progress = useMemo(() => {
     if (props.timer) {
-      const progress_circle = document.getElementById('timer-circle');
       const total_duration = props.timer.Config.Duration[props.timer.Mode]
-      const progress = ((total_duration - props.timer.Duration) / total_duration) * 100
-      progress_circle.style.setProperty("--progress", `${progress}%`)
+      return `${((total_duration - props.timer.Duration) / total_duration) * 100}%`
     }
   }, [props.timer])
   return (
-    <div class="circle flex justify-center items-center" id="timer-circle">
+    <div class="circle flex justify-center items-center" id="timer-circle" style={{"--progress": progress}}>
       <div class="inner-circle flex justify-center items-center bg-white dark:bg-zinc-800">
         <Timer duration={props.timer.Duration} class="text-2xl font-bold" />
       </div>
@@ -71,10 +69,21 @@ function TimerCircle(props) {
   );
 }
 
-function ModeSelection(props) {
+function ModeSelection(p) {
+  const modeOptions = useMemo(() => {
+    return [0, 1, 2].map((mode) =>
+      <option value={mode} class="checked:dark:bg-zinc-700 checked:bg-zinc-300 hover:bg-zinc-300">
+        {modeString(mode)}
+      </option>
+    )
+  }, [])
+
   return (
-    <select aria-label="Timer mode" title="Timer mode" value={props.mode} class="dark:bg-zinc-900 bg-zinc-200 p-2 rounded" onChange={(e) => props.onChange(parseInt(e.target.value))}>
-      {[0,1,2].map((mode)=> <option value={mode} class="checked:dark:bg-zinc-700 checked:bg-zinc-300 hover:bg-zinc-300">{modeString(mode)}</option>)}
+    <select aria-label="Timer mode" title="Timer mode" value={p.timer.Mode} class="dark:bg-zinc-900 bg-zinc-200 p-2 rounded" onChange={(e) => {
+      p.timer.Mode = parseInt(e.target.value);
+      postTimer(p.timer);
+    }}>
+      {modeOptions}
     </select>
   );
 }
@@ -104,13 +113,10 @@ function modeString(mode) {
   switch (mode) {
     case 0:
       return "Pomodoro"
-      break;
     case 1:
       return "Short Break"
-      break;
     case 2:
       return "Long Break"
-      break;
   }
 }
 

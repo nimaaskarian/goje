@@ -256,7 +256,7 @@ func (d *Daemon) Run() {
 			slog.Warn("connection throw error", "err", err)
 			continue
 		}
-		conn.Write([]byte("OK tom 0.0.1\n"))
+		conn.Write([]byte("OK goje 0.0.1\n"))
 		for {
 			n, err := conn.Read(buff)
 			if err == io.EOF {

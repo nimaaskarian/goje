@@ -18,9 +18,9 @@ type TimerConfig struct {
 	Duration        [MODE_MAX]time.Duration
 	OnModeEnd       [MODE_MAX]func(*Timer) `json:"-"`
 	OnModeStart     [MODE_MAX]func(*Timer) `json:"-"`
-	OnChange        func(*Timer) `json:"-"`
+	OnChange        func(*Timer)           `json:"-"`
 	Paused          bool
-	DurationPerTick time.Duration
+	DurationPerTick time.Duration `mapstructure:"duration-per-tick"`
 }
 
 var DefaultConfig = TimerConfig{

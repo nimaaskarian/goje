@@ -20,19 +20,20 @@ type Daemon struct {
 }
 
 func (d *Daemon) TimerEvent() Event {
-  return Event {
-    Name: "timer",
-    Payload: d.Timer,
-  }
+	return Event{
+		Name:    "timer",
+		Payload: d.Timer,
+	}
 }
 
 func (d *Daemon) UpdateClients(e Event) {
-  for _, client := range d.Clients {
-    client <- e
-  }
+	for _, client := range d.Clients {
+		client <- e
+	}
 }
 
 func (d *Daemon) Init() {
+	// gin.SetMode(gin.ReleaseMode)
 	d.router = gin.Default()
 	d.router.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
