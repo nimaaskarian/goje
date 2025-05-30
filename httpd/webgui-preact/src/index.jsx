@@ -15,7 +15,6 @@ export function App() {
     }
   }, [])
   if (timer) {
-    const session_count = Math.max(timer.Config.SessionCount, timer.SessionCount)
     return (
       <div class="min-h-screen flex flex-col justify-center items-center bg-zinc-200 text-zinc-900 dark:text-white dark:bg-zinc-900">
         <a href="" class="absolute top-4 right-4 p-2 rounded dark:bg-zinc-800 bg-white shadow-sm hover:shadow-md transition ease-in-out duration-150">
@@ -25,11 +24,11 @@ export function App() {
           <div class="dark:bg-zinc-800 bg-white rounded-lg p-4 flex gap-4 flex-col shadow-sm hover:shadow-md transition ease-in-out duration-150">
             <ModeSelection timer={timer} />
             <div class="flex flex-row justify-center gap-2">
-              <button title="-1 sessions" aria-label="Substract from sessions" class="cursor-pointer" onClick={() => { timer.SessionCount--; postTimer(timer); }}>
+              <button title="-1 finished sessions" aria-label="Substract from sessions" class="cursor-pointer" onClick={() => { timer.FinishedSessions--; postTimer(timer); }}>
                 {minus_icon}
               </button>
-              {session_count - timer.SessionCount}/{session_count}
-              <button title="+1 sessions" aria-label="Add to sessions" class="cursor-pointer" onClick={() => { timer.SessionCount++; postTimer(timer); }}>
+              {timer.FinishedSessions}/{timer.Config.Sessions}
+              <button title="+1 finished sessions" aria-label="Add to sessions" class="cursor-pointer" onClick={() => { timer.FinishedSessions++; postTimer(timer); }}>
                 {plus_icon}
               </button>
             </div>
@@ -61,9 +60,9 @@ function TimerCircle(props) {
     }
   }, [props.timer])
   return (
-    <div class="circle flex justify-center items-center" id="timer-circle" style={{"--progress": progress}}>
+    <div class="circle flex justify-center items-center" id="timer-circle" style={{ "--progress": progress }}>
       <div class="inner-circle flex justify-center items-center bg-white dark:bg-zinc-800">
-        <Timer duration={props.timer.Duration} class="text-2xl font-bold" />
+        <Timer timer={props.timer} class="text-2xl font-bold" />
       </div>
     </div>
   );
@@ -89,21 +88,33 @@ function ModeSelection(p) {
 }
 
 function Timer(props) {
-  let seconds = props.duration / 1E9;
-  let minutes = (seconds / 60 >> 0)
-  seconds = seconds % 60
-  let hours = (minutes / 60 >> 0)
-  minutes = minutes % 60
+  const [fraction, seconds, minutes, hours] = useMemo(() => {
+    let fraction = ""
+    let fraclen = 0
+    if (props.timer.Config.DurationPerTick < 1E9) {
+      fraclen = Math.log10(1E9/props.timer.Config.DurationPerTick + 1) >> 0
+      const fraction_value = (props.timer.Duration % 1E9) / props.timer.Config.DurationPerTick
+      console.log(fraction_value)
+      fraction = `.${String(fraction_value).padStart(fraclen, '0')}`
+    }
+    let seconds = (props.timer.Duration / 1E9 >> 0);
+    let minutes = (seconds / 60 >> 0)
+    seconds = seconds % 60
+    let hours = (minutes / 60 >> 0)
+    minutes = minutes % 60
+    return [fraction,seconds, minutes, hours]
+  }, [props.timer.Duration, props.timer.Config.DurationPerTick])
+
   if (hours !== 0) {
     return (
       <div class={props.class}>
-        {String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+        {String(hours).padStart(2, '0')}:{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}{fraction}
       </div>
     );
   } else {
     return (
       <div class={props.class}>
-        {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}
+        {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}{fraction}
       </div>
     );
   }

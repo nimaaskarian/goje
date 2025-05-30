@@ -63,7 +63,7 @@ func TestLoop(t *testing.T) {
 func TestTimer(t *testing.T) {
   var config = DefaultConfig
   config.DurationPerTick = time.Millisecond*10
-  config.SessionCount = 2
+  config.Sessions = 2
   config.Duration[Pomodoro] = 4*config.DurationPerTick
   config.Duration[ShortBreak] = 2*config.DurationPerTick
   config.Duration[LongBreak] = 5*config.DurationPerTick

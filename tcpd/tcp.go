@@ -113,16 +113,16 @@ func sessionsCmd(timer *timer.Timer, args []string) (string, error) {
       count, err = strconv.ParseUint(args[1][1:], 10, 32)
       if err == nil {
         if args[1][0] == '+' {
-          timer.SessionCount += uint(count)
+          timer.FinishedSessions += uint(count)
         } else {
-          timer.SessionCount -= uint(count)
+          timer.FinishedSessions -= uint(count)
         }
       }
     } else {
       var count uint64
       count, err = strconv.ParseUint(args[1], 10, 32)
       if err == nil {
-        timer.SessionCount = uint(count)
+        timer.FinishedSessions = uint(count)
       }
     }
 		if err != nil {
