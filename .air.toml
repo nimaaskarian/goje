@@ -1,7 +1,7 @@
 root = "."
 
 [build]
-bin = "./tom daemon"
+bin = "./goje daemon"
 cmd = "make"
 delay = 1000
 exclude_dir = ["./httpd/webgui-preact/node_modules"]

@@ -2,7 +2,7 @@ package httpd
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/nimaaskarian/tom/timer"
+	"github.com/nimaaskarian/goje/timer"
 )
 
 type Event struct {

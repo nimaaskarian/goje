@@ -8,9 +8,9 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "tom",
+	Use:   "goje",
 	Short: "a server-client pomodoro timer",
-	Long: "tom is a mpd-like, client server pomodoro timer with modern features",
+	Long: "goje is a mpd-like, client server pomodoro timer with modern features",
 }
 
 func Execute() {

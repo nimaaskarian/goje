@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nimaaskarian/tom/timer"
+	"github.com/nimaaskarian/goje/timer"
 )
 
 type Command struct {

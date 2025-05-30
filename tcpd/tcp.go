@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nimaaskarian/tom/timer"
+	"github.com/nimaaskarian/goje/timer"
 )
 
 const (

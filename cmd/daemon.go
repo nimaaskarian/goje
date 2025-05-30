@@ -6,11 +6,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/nimaaskarian/tom/activitywatch"
-	"github.com/nimaaskarian/tom/httpd"
-	"github.com/nimaaskarian/tom/tcpd"
-	"github.com/nimaaskarian/tom/timer"
-	"github.com/nimaaskarian/tom/utils"
+	"github.com/nimaaskarian/goje/activitywatch"
+	"github.com/nimaaskarian/goje/httpd"
+	"github.com/nimaaskarian/goje/tcpd"
+	"github.com/nimaaskarian/goje/timer"
+	"github.com/nimaaskarian/goje/utils"
 	"github.com/spf13/cobra"
 )
 

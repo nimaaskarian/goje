@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/nimaaskarian/aw-go"
-	"github.com/nimaaskarian/tom/timer"
+	"github.com/nimaaskarian/goje/timer"
 )
 
 const BUCKET_ID = "aw-watcher-tom_nimas-pc"

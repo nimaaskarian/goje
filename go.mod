@@ -1,4 +1,4 @@
-module github.com/nimaaskarian/tom
+module github.com/nimaaskarian/goje
 
 go 1.24.3
 
