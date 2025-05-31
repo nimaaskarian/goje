@@ -25,6 +25,7 @@ type DaemonConfig struct {
 	HttpAddress   string `mapstructure:"http-address"`
 	BuffSize      uint   `mapstructure:"buff-size"`
 	NoWebgui      bool   `mapstructure:"no-webgui"`
+	NoOpenBrowser bool   `mapstructure:"no-open-browser"`
 	WritePath     string `mapstructure:"write-path"`
 	Activitywatch bool
 	ExecEnd       string `mapstructure:"exec-end"`
@@ -55,9 +56,10 @@ func init() {
 	daemonCmd.PersistentFlags().StringVarP(&config.TcpAddress, "tcp-address", "a", "", "address:[port] for tcp pomodoro daemon (doesn't run when empty)")
 	daemonCmd.PersistentFlags().StringVarP(&config.HttpAddress, "http-address", "A", "", "address:[port] for http pomodoro api (doesn't run when empty)")
 	daemonCmd.PersistentFlags().BoolVar(&config.NoWebgui, "no-webgui", false, "don't run webgui. webgui can't be run without the json server")
-	daemonCmd.PersistentFlags().UintVar(&config.BuffSize, "buff-size", 0, "size of buffer that messages are parsed with")
-	daemonCmd.PersistentFlags().BoolVarP(&config.Activitywatch, "activitywatch", "w", false, "daemon send's pomodoro data to activitywatch if is present")
-	daemonCmd.PersistentFlags().StringVar(&config.WritePath, "write-file", "", "write timer events in a file at given path")
+	daemonCmd.PersistentFlags().UintVar(&config.BuffSize, "buff-size", 0, "size of buffer that tcp messages are parsed with")
+	daemonCmd.PersistentFlags().BoolVar(&config.NoOpenBrowser, "no-open-browser", false, "don't open the browser when running webgui")
+	daemonCmd.PersistentFlags().BoolVarP(&config.Activitywatch, "activitywatch", "", false, "daemon send's pomodoro data to activitywatch if is present")
+	daemonCmd.PersistentFlags().StringVar(&config.WritePath, "write-file", "w", "write timer events in a file at given path")
 	viper.BindPFlags(daemonCmd.PersistentFlags())
 }
 
@@ -77,9 +79,9 @@ var daemonCmd = &cobra.Command{
 		if config.ExecStart != "" {
 			config.Timer.OnModeStart = append(config.Timer.OnModeStart, func(t *timer.Timer) {
 				content, _ := json.Marshal(t)
-        if err := exec.Command(config.ExecStart, string(content)).Run(); err != nil {
-          log.Fatalln(err)
-        }
+				if err := exec.Command(config.ExecStart, string(content)).Run(); err != nil {
+					log.Fatalln(err)
+				}
 			})
 		}
 		if config.ExecEnd != "" {
@@ -88,17 +90,12 @@ var daemonCmd = &cobra.Command{
 				exec.Command(config.ExecStart, string(content)).Run()
 			})
 		}
-		// if config.Print {
-		// 	config.Timer.OnChange = append(config.Timer.OnChange, func(t *timer.Timer) {
-		// 		fmt.Fprintln(os.Stderr, t)
-		// 	})
-		// }
 		if config.WritePath != "" {
-      writeChanges := func(event_callback func(payload any) timer.Event) func (t *timer.Timer) {
-        return func (t *timer.Timer) {
-          content, _ := json.Marshal(event_callback(t))
-          errout = os.WriteFile(config.WritePath, content, 0644)
-        }
+			writeChanges := func(event_callback func(payload any) timer.Event) func(t *timer.Timer) {
+				return func(t *timer.Timer) {
+					content, _ := json.Marshal(event_callback(t))
+					errout = os.WriteFile(config.WritePath, content, 0644)
+				}
 			}
 			config.Timer.OnChange = append(config.Timer.OnChange, writeChanges(timer.OnChangeEvent))
 			config.Timer.OnModeEnd = append(config.Timer.OnChange, writeChanges(timer.OnModeEndEvent))
@@ -137,29 +134,30 @@ var daemonCmd = &cobra.Command{
 			}()
 		}
 		tomato.Init()
-    sig := make(chan os.Signal, 1)
-    signal.Notify(sig, syscall.SIGHUP)
-    go tomato.Loop()
-    for {
-      <-sig
-      if err := rootCmd.PersistentPreRunE(rootCmd, os.Args[1:]); err != nil {
-        return err
-      }
-      viper.Unmarshal(&config)
-    }
-		return nil
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, syscall.SIGHUP)
+		go tomato.Loop()
+		for {
+			<-sig
+			if err := rootCmd.PersistentPreRunE(rootCmd, os.Args[1:]); err != nil {
+				return err
+			}
+			viper.Unmarshal(&config)
+		}
 	},
 }
 
 func runWebgui(http_deamon *httpd.Daemon) {
-	if strings.HasPrefix(config.HttpAddress, "http://") {
-		utils.OpenURL(config.HttpAddress)
-	} else {
-		if config.HttpAddress[0] == ':' {
-			utils.OpenURL("http://localhost" + config.HttpAddress)
+	http_deamon.WebguiRoutes()
+	if !config.NoOpenBrowser {
+		if strings.HasPrefix(config.HttpAddress, "http://") {
+			utils.OpenURL(config.HttpAddress)
 		} else {
-			utils.OpenURL("http://" + config.HttpAddress)
+			if config.HttpAddress[0] == ':' {
+				utils.OpenURL("http://localhost" + config.HttpAddress)
+			} else {
+				utils.OpenURL("http://" + config.HttpAddress)
+			}
 		}
 	}
-	http_deamon.WebguiRoutes()
 }
