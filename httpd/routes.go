@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/nimaaskarian/goje/timer"
 )
 
 //go:embed webgui-preact/dist/*
@@ -21,13 +22,13 @@ func (d *Daemon) JsonRoutes() {
 	d.router.POST("/api/timer/nextmode", func(c *gin.Context) {
 		c.Header("Cache-Control", "no-cache")
     d.Timer.SwitchNextMode()
-    d.UpdateClients(d.TimerEvent())
+    d.UpdateClients(d.ChangeEvent())
     c.JSON(http.StatusOK, d.Timer)
 	})
 	d.router.POST("/api/timer/prevmode", func(c *gin.Context) {
 		c.Header("Cache-Control", "no-cache")
     d.Timer.SwitchPrevMode()
-    d.UpdateClients(d.TimerEvent())
+    d.UpdateClients(d.ChangeEvent())
     c.JSON(http.StatusOK, d.Timer)
 	})
 	d.router.POST("/api/timer", func(c *gin.Context) {
@@ -37,7 +38,7 @@ func (d *Daemon) JsonRoutes() {
       if prev_mode != d.Timer.Mode {
         d.Timer.Duration = d.Timer.Config.Duration[d.Timer.Mode]
       }
-      d.UpdateClients(d.TimerEvent())
+      d.UpdateClients(d.ChangeEvent())
       c.JSON(http.StatusOK, d.Timer)
     }
 	})
@@ -47,8 +48,8 @@ func (d *Daemon) JsonRoutes() {
     c.Header("Cache-Control", "no-cache")
     c.Header("Connection", "keep-alive")
     c.Header("Transfer-Encoding", "chunked")
-		client := make(chan Event, 1)
-		client <- Event{Payload: d.Timer, Name: "timer"}
+		client := make(chan timer.Event, 1)
+		client <- d.ChangeEvent()
 		d.lastId++
 		id := d.lastId
 		d.Clients.Store(id, client)

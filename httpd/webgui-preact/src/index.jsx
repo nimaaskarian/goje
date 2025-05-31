@@ -6,10 +6,26 @@ import './style.css';
 export function App() {
   const [timer, setTimer] = useState()
   useEffect(() => {
+    let notification = false;
+    Notification.requestPermission((result) => {
+      notification = result === "granted";
+    });
     const sse = new EventSource("/api/timer/stream")
-    sse.addEventListener("timer", (e) => {
+    sse.addEventListener("change", (e) => {
       setTimer(JSON.parse(e.data))
     })
+    if (notification) {
+      for (let type in ["start", "end"]) {
+        sse.addEventListener(type, (e) => {
+          const n = new Notification("Goje", { body: `${modeString(timer.Mode)} has started` });
+          document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") {
+              n.close();
+            }
+          });
+        })
+      }
+    }
     return () => {
       sse.close()
     }
@@ -35,21 +51,29 @@ export function App() {
 
             <TimerCircle timer={timer} />
             <div class="flex justify-center gap-4">
-              <button title="Previous mode" aria-label="Previous mode" class="cursor-pointer" onClick={() => { postTimer(timer, "prevmode") }}>
+              <Button title="Previous mode" onClick={() => { postTimer(timer, "prevmode") }}>
                 {prev_icon}
-              </button>
-              <button title={`${timer.Paused ? "Resume" : "Pause"} timer`} aria-label={`${timer.Paused ? "Resume" : "Pause"} timer`} onClick={() => { timer.Paused = !timer.Paused; postTimer(timer) }} class="cursor-pointer transition hover:text-zinc-700 hover:dark:text-zinc-200 ease-out">
+              </Button>
+              <Button title={`${timer.Paused ? "Resume" : "Pause"} timer`} onClick={() => { timer.Paused = !timer.Paused; postTimer(timer) }}>
                 {timer.Paused ? play_icon : pause_icon}
-              </button>
-              <button title="next mode" aria-label="Next mode" class="cursor-pointer" onClick={() => { postTimer(timer, "nextmode") }}>
+              </Button>
+              <Button title="Next mode" onClick={() => { postTimer(timer, "nextmode") }}>
                 {next_icon}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       </div>
     );
   }
+}
+
+function Button(props) {
+  return (
+    <button title={props.title} aria-label={props.title} onClick={props.onClick} class="cursor-pointer transition hover:text-zinc-700 hover:dark:text-zinc-200 ease-out">
+      {props.children}
+    </button>
+  );
 }
 
 function TimerCircle(props) {
@@ -92,7 +116,7 @@ function Timer(props) {
     let fraction = ""
     let fraclen = 0
     if (props.timer.Config.DurationPerTick < 1E9) {
-      fraclen = Math.log10(1E9/props.timer.Config.DurationPerTick + 1) >> 0
+      fraclen = Math.log10(1E9 / props.timer.Config.DurationPerTick + 1) >> 0
       const fraction_value = (props.timer.Duration % 1E9) / props.timer.Config.DurationPerTick
       fraction = `.${String(fraction_value).padStart(fraclen, '0')}`
     }
@@ -102,14 +126,14 @@ function Timer(props) {
     let hours_value = (minutes / 60 >> 0)
     let hours = ""
     if (hours_value !== 0) {
-      hours = String(hours_value).padStart(2, '0')+':'
+      hours = String(hours_value).padStart(2, '0') + ':'
     }
     minutes = minutes % 60
-    return [fraction,seconds, minutes, hours]
+    return [fraction, seconds, minutes, hours]
   }, [props.timer.Duration, props.timer.Config.DurationPerTick])
 
   return (
-    <div  class="text-2xl font-bold">
+    <div class="text-2xl font-bold">
       {hours}{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}{fraction}
     </div>
   );
@@ -126,19 +150,19 @@ function modeString(mode) {
   }
 }
 
-const pause_icon = <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="size-10">
+const pause_icon = <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="size-10">
   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
 </svg>
 
-const play_icon = <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1} stroke="currentColor" className="size-10">
+const play_icon = <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="size-10">
   <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />
 </svg>
 
-const next_icon = <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={10 / 7} stroke="currentColor" className="size-7">
+const next_icon = <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={30 / 7} stroke="currentColor" className="size-7">
   <path strokeLinecap="round" strokeLinejoin="round" d="M3 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061A1.125 1.125 0 0 1 3 16.811V8.69ZM12.75 8.689c0-.864.933-1.406 1.683-.977l7.108 4.061a1.125 1.125 0 0 1 0 1.954l-7.108 4.061a1.125 1.125 0 0 1-1.683-.977V8.69Z" />
 </svg>
 
-const prev_icon = <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={10 / 7} stroke="currentColor" className="size-7">
+const prev_icon = <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={30 / 7} stroke="currentColor" className="size-7">
   <path strokeLinecap="round" strokeLinejoin="round" d="M21 16.811c0 .864-.933 1.406-1.683.977l-7.108-4.061a1.125 1.125 0 0 1 0-1.954l7.108-4.061A1.125 1.125 0 0 1 21 8.689v8.122ZM11.25 16.811c0 .864-.933 1.406-1.683.977l-7.108-4.061a1.125 1.125 0 0 1 0-1.954l7.108-4.061a1.125 1.125 0 0 1 1.683.977v8.122Z" />
 </svg>
 

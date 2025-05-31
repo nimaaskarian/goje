@@ -25,3 +25,7 @@ func ConfigDir() string {
 	}
 	return filepath.Join(base, "goje")
 }
+
+func IsRunningInTerminal() bool {
+  return true
+}

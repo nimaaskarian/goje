@@ -61,7 +61,7 @@ func genCommands() (chan Command, error) {
 
 func TestHandleAllCommands(t * testing.T) {
   pomodoro_timer := timer.Timer {
-    Config: timer.DefaultConfig,
+    Config: &timer.DefaultConfig,
   }
   pomodoro_timer.Init()
   cmds, err := genCommands()
@@ -81,7 +81,7 @@ func TestHandleAllCommands(t * testing.T) {
 
 func TestPrintAllCommands(t * testing.T) {
   pomodoro_timer := timer.Timer {
-    Config: timer.DefaultConfig,
+    Config: &timer.DefaultConfig,
   }
   pomodoro_timer.Init()
   cmds, err := genCommands()

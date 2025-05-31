@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -27,7 +28,10 @@ var rootCmd = &cobra.Command{
       viper.SetConfigType("toml")
       viper.AddConfigPath(utils.ConfigDir())
     }
-    return viper.ReadInConfig()
+    if err := viper.ReadInConfig(); !errors.Is(err, viper.ConfigFileNotFoundError{}) {
+      return err
+    }
+    return nil
   },
 }
 
