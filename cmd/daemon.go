@@ -5,8 +5,10 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/nimaaskarian/goje/activitywatch"
 	"github.com/nimaaskarian/goje/httpd"
@@ -135,7 +137,16 @@ var daemonCmd = &cobra.Command{
 			}()
 		}
 		tomato.Init()
-		tomato.Loop()
+    sig := make(chan os.Signal, 1)
+    signal.Notify(sig, syscall.SIGHUP)
+    go tomato.Loop()
+    for {
+      <-sig
+      if err := rootCmd.PersistentPreRunE(rootCmd, os.Args[1:]); err != nil {
+        return err
+      }
+      viper.Unmarshal(&config)
+    }
 		return nil
 	},
 }
