@@ -16,11 +16,3 @@ func OpenURL(url string) error {
 func ConfigDir() string {
   return filepath.Join(os.Getenv("APPDATA"), "goje")
 }
-
-func IsRunningInTerminal() bool {
-	fileInfo, err := os.Stdout.Stat()
-	if err != nil {
-		return false
-	}
-	return (fileInfo.Mode() & os.ModeCharDevice) != 0
-}
