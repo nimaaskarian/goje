@@ -88,8 +88,7 @@ command: %s
 func pauseCmd(timer *timer.Timer, args []string) (string, error) {
 	switch len(args) {
 	case 1:
-		timer.Paused = !timer.Paused
-		timer.OnChange()
+    timer.Pause()
 	case 2:
 		var err error
 		timer.Paused, err = parseBool(args[1])
@@ -97,6 +96,7 @@ func pauseCmd(timer *timer.Timer, args []string) (string, error) {
 			return "", err
 		} else {
 			timer.OnChange()
+      timer.OnPause()
 		}
 	default:
 		return "", TooManyArgsError{args[0]}

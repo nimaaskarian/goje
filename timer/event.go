@@ -23,4 +23,10 @@ func OnChangeEvent(payload any) (e Event) {
   return
 }
 
+func OnPauseEvent(payload any) (e Event) {
+  e.Name = "pause"
+  e.Payload = payload
+  return
+}
+
 

@@ -20,6 +20,7 @@ type TimerConfig struct {
 	OnModeEnd       []func(*Timer) `json:"-"`
 	OnModeStart     []func(*Timer) `json:"-"`
 	OnChange        []func(*Timer) `json:"-"`
+	OnPause         []func(*Timer) `json:"-"`
 	Paused          bool
 	DurationPerTick time.Duration `mapstructure:"duration-per-tick"`
 }
@@ -45,7 +46,7 @@ type Timer struct {
 
 func (t *Timer) Reset() {
 	t.SeekTo(t.Config.Duration[t.Mode])
-  t.onStart()
+	t.onStart()
 }
 
 func (t *Timer) onStart() {
@@ -75,8 +76,17 @@ func (t *Timer) OnChange() {
 	}
 }
 
-func (t *Timer) Pause() {
+func (t *Timer) Pause(p ...bool) {
   t.Paused = !t.Paused
+  t.OnPause()
+}
+
+func (t *Timer) OnPause() {
+	if t.Config.OnChange != nil {
+    for _, onPause := range t.Config.OnPause {
+      onPause(t)
+    }
+  }
 }
 
 func (t *Timer) SeekTo(duration time.Duration) {
@@ -103,7 +113,7 @@ func (t *Timer) onEnd() {
 
 func (t *Timer) tick() {
 	if t.Duration <= 0 {
-    t.onEnd()
+		t.onEnd()
 		t.SwitchNextMode()
 	}
 	time.Sleep(t.Config.DurationPerTick)
@@ -154,7 +164,7 @@ func (t *Timer) SwitchPrevMode() {
 		t.FinishedSessions--
 		t.Mode = Pomodoro
 	}
-  t.Reset()
+	t.Reset()
 }
 
 func (t *Timer) String() string {
