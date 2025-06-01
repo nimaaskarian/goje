@@ -7,7 +7,16 @@
 		<title>Goje</title>
 	</head>
 	<body>
-		<div id="app"></div>
+		<div id="app">
+      <noscript>
+        <div class="p-4">
+          <h1 class="text-2xl bold block mb-2">Hello there nerd. yes i know who you are.</h1>
+          Seems like you don't have JS enabled. goje's webgui depends on JS, its written in <a href="https://preactjs.com/" class="text-blue-500">Preact</a>.
+          Either use the tcp server (the default address is <code>localhost:7800</code>), or the json api (<code>/api/timer</code>).
+          Or contribute by making a pure html+css webgui. PRs are welcome at <a href="https://github.com/nimaaskarian/goje/pulls" class="text-blue-500">github</a>.
+        </div>
+      </noscript>
+    </div>
 		<script type="module" src="/src/index.jsx"></script>
 	</body>
 </html>

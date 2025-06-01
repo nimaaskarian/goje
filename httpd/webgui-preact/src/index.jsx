@@ -4,49 +4,39 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 import './style.css';
 
 export function App() {
-  const [timer, setTimer] = useState()
-  useEffect(() => {
-    let notification = false;
-    Notification.requestPermission((result) => {
-      notification = result === "granted";
-    });
+  const [timer, setTimer] = useState(false)
+  const [settings, setSettings] = useState(undefined)
+  const sse = useMemo(() => {
     const sse = new EventSource("/api/timer/stream")
     sse.addEventListener("change", (e) => {
       setTimer(JSON.parse(e.data))
     })
-    if (notification) {
-      for (let type in ["start", "end"]) {
-        sse.addEventListener(type, (e) => {
-          const n = new Notification("Goje", { body: `${modeString(timer.Mode)} has started` });
-          document.addEventListener("visibilitychange", () => {
-            if (document.visibilityState === "visible") {
-              n.close();
-            }
-          });
-        })
-      }
+    sse.onerror = _ => {
+      setTimer(null)
     }
-    return () => {
+    window.addEventListener("beforeunload", () => {
       sse.close()
-    }
+    })
+    return sse;
   }, [])
   if (timer) {
     return (
-      <div class="min-h-screen flex flex-col justify-center items-center bg-zinc-200 text-zinc-900 dark:text-white dark:bg-zinc-900">
-        <a href="" class="absolute top-4 right-4 p-2 rounded dark:bg-zinc-800 bg-white shadow-sm hover:shadow-md transition ease-in-out duration-150">
+      <div class={"min-h-screen flex flex-col justify-center items-center bg-zinc-200 text-zinc-900 dark:text-white dark:bg-zinc-900" + (settings ? " overflow-hidden" : "")}>
+        <Settings onClose={() => setSettings(false)} timer={timer} hidden={!settings} sse={sse} />
+        <button title="open settings" aria-label="open settings" onClick={() => setSettings(true)} class="absolute top-4 right-4 p-2 rounded dark:bg-zinc-800 bg-white shadow-sm hover:shadow-md transition ease-in-out duration-150 hover:text-zinc-600 hover:dark:text-zinc-300 cursor-pointer z-0">
           {cog_icon}
-        </a>
+        </button>
         <div class="min-w-60 text-center flex flex-col gap-4">
           <div class="dark:bg-zinc-800 bg-white rounded-lg p-4 flex gap-4 flex-col shadow-sm hover:shadow-md transition ease-in-out duration-150">
             <ModeSelection timer={timer} />
             <div class="flex flex-row justify-center gap-2">
-              <button title="-1 finished sessions" aria-label="Substract from sessions" class="cursor-pointer" onClick={() => { timer.FinishedSessions--; postTimer(timer); }}>
+              <Button title="-1 finished sessions" onClick={() => { timer.FinishedSessions--; postTimer(timer); }}>
                 {minus_icon}
-              </button>
+              </Button>
               {timer.FinishedSessions}/{timer.Config.Sessions}
-              <button title="+1 finished sessions" aria-label="Add to sessions" class="cursor-pointer" onClick={() => { timer.FinishedSessions++; postTimer(timer); }}>
+              <Button title="+1 finished sessions" onClick={() => { timer.FinishedSessions++; postTimer(timer); }}>
                 {plus_icon}
-              </button>
+              </Button>
             </div>
 
             <TimerCircle timer={timer} />
@@ -66,11 +56,137 @@ export function App() {
       </div>
     );
   }
+  if (timer === null) {
+    return (
+      <div class="min-h-screen flex flex-col justify-center items-center bg-zinc-200 text-zinc-900 dark:text-white dark:bg-zinc-900">
+        Goje isn't running :(
+      </div>
+    )
+  }
 }
 
+function Settings(p) {
+  const duration = useMemo(() => [0, 1, 2].map(mode => formatDuration(p.timer.Config.Duration[mode])), [p.timer.Config.Duration])
+  useEffect(() => {
+    for (let type in ["start", "end"]) {
+      p.sse.addEventListener(type, (e) => {
+        const n = new Notification("Goje", { body: `${modeString(p.timer.Mode)} has started` });
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") {
+            n.close();
+          }
+        });
+      })
+    }
+  }, [p.sse])
+  return (
+    <div class={"z-100 top-0 right-0 absolute flex min-w-full min-h-screen overflow-hidden" + (p.hidden ? " hidden" : "")}>
+      <div class="transition ease-in-out duration-300 grow bg-black/30" onClick={p.onClose} />
+      <div class="p-4 overflow-y-scroll transition-all bg-white dark:bg-zinc-800 rounded-l-lg shadow-md hover:shadow-lg ease-in-out duration-300 float-right h-screen text-wrap w-full md:w-70">
+        <div class="flex justify-end">
+          <Button onClick={p.onClose} title="close settings">{close_icon}</Button>
+        </div>
+        <form onSubmit={(e) => { e.preventDefault(); postTimer(p.timer) }} class="flex flex-col gap-4">
+          {[0, 1, 2].map((mode) =>
+            <div>
+              <label htmlFor={`timer-config-duration-${mode}`}>{modeString(mode)} duration</label>
+              <input id={`timer-config-duration-${mode}`}
+                class="rounded p-2 text-md bg-zinc-200 dark:bg-zinc-700 w-full"
+                type="text" value={duration[mode]}
+                onChange={(e) => p.timer.Config.Duration[mode] = parseDuration(e.target.value)}
+              />
+            </div>
+          )}
+          <div>
+            <label htmlFor="timer-config-sessions">Sessions</label>
+            <input id="timer-config-sessions"
+              class="rounded p-2 text-md bg-zinc-200 dark:bg-zinc-700 w-full"
+              type="text" value={p.timer.Config.Sessions}
+              onChange={(e) => p.timer.Config.Sessions = parseInt(e.target.value)}
+            />
+          </div>
+          <Radio id="timer-config-paused" checked={p.timer.Config.Paused} onChange={() => p.timer.Config.Paused = !p.timer.Config.Paused}>
+            is timer initially paused
+          </Radio>
+          <Radio id="webgui-notification" onChange={() => {
+            let notification = false;
+            Notification.requestPermission((result) => {
+              notification = result === "granted";
+            });
+          }}>
+            send notifications
+          </Radio>
+          <input type="submit" value="save" class="cursor-pointer p-2 rounded transition ease-in-out duration-300 dark:bg-zinc-900 dark:hover:text-zinc-300 hover:text-zinc-700 bg-zinc-200" />
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function Radio(p) {
+  return (
+    <div class="flex items-center gap-2 box-border">
+      <input defaultChecked={p.checked} onChange={p.onChange} id={p.id} type="checkbox"
+        class="appearance-none
+        cursor-pointer
+        checked:dark:bg-zinc-500
+        dark:border-zinc-500
+        checked:bg-zinc-500
+        border-zinc-500
+        border-2
+        w-3.5
+        aspect-square
+        rounded-full
+    disabled:border-gray-400"
+      />
+      <label class="cursor-pointer" htmlFor={p.id}>{p.children}</label>
+    </div>
+  )
+}
+const ns_in_ms = 1_000_000
+const ns_in_s = 1_000_000_000
+const ns_in_m = ns_in_s * 60
+const ns_in_h = ns_in_m * 60
+
+function formatDuration(nanoseconds) {
+  let hours = (nanoseconds / ns_in_h) >> 0
+  nanoseconds %= ns_in_h
+  let minutes = (nanoseconds / ns_in_m) >> 0
+  nanoseconds %= ns_in_m
+  let seconds = (nanoseconds / ns_in_s) >> 0
+  nanoseconds %= ns_in_s
+  let miliseconds = (nanoseconds / ns_in_ms) >> 0
+  nanoseconds %= ns_in_ms
+  return [[hours, "h"], [minutes, "m"], [seconds, "s"], [miliseconds, "ms"], [nanoseconds, "ns"]].filter((e) => e[0]).flat().join("")
+}
+
+function parseDuration(str) {
+  let nanoseconds = 0
+  let nanoseconds_str = str.match(/(\d+)ns/)
+  if (nanoseconds_str) {
+    nanoseconds = parseInt(nanoseconds_str[1])
+  }
+  let miliseconds = str.match(/(\d+)ms/);
+  let seconds = str.match(/(\d+)s/);
+  let hours = str.match(/(\d+)h/);
+  let minutes = str.match(/(\d+)m(?!s)/);
+  if (hours) {
+    nanoseconds += parseInt(hours[1]) * ns_in_h;
+  } if (minutes) {
+    nanoseconds += parseInt(minutes[1]) * ns_in_m;
+  } if (seconds) {
+    nanoseconds += parseInt(seconds[1]) * ns_in_s
+  } if (miliseconds) {
+    nanoseconds += parseInt(miliseconds[1]) * ns_in_ms
+  }
+  return nanoseconds
+}
+
+// a button with customized styles that uses its children like a good normal element.
+// also sets the title prop as its aria-label as well. a11y yay
 function Button(props) {
   return (
-    <button title={props.title} aria-label={props.title} onClick={props.onClick} class="cursor-pointer transition hover:text-zinc-700 hover:dark:text-zinc-200 ease-out">
+    <button title={props.title} aria-label={props.title} onClick={props.onClick} class="cursor-pointer transition hover:text-zinc-600 hover:dark:text-zinc-300 ease-out">
       {props.children}
     </button>
   );
@@ -177,6 +293,11 @@ const minus_icon = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" f
 const plus_icon = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5">
   <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
 </svg>
+
+const close_icon = <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" class="size-6">
+  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+</svg>
+
 
 function postTimer(timer, endpoint) {
   let xhr = new XMLHttpRequest();
