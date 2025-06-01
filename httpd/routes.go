@@ -25,6 +25,12 @@ func (d *Daemon) JsonRoutes() {
     d.UpdateClients(d.ChangeEvent())
     c.JSON(http.StatusOK, d.Timer)
 	})
+	d.router.POST("/api/timer/pause", func(c *gin.Context) {
+		c.Header("Cache-Control", "no-cache")
+    d.Timer.Pause()
+    d.UpdateClients(d.ChangeEvent())
+    c.JSON(http.StatusOK, d.Timer)
+	})
 	d.router.POST("/api/timer/prevmode", func(c *gin.Context) {
 		c.Header("Cache-Control", "no-cache")
     d.Timer.SwitchPrevMode()

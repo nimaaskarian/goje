@@ -75,6 +75,10 @@ func (t *Timer) OnChange() {
 	}
 }
 
+func (t *Timer) Pause() {
+  t.Paused = !t.Paused
+}
+
 func (t *Timer) SeekTo(duration time.Duration) {
 	t.Duration = duration
 	t.OnChange()
@@ -144,10 +148,10 @@ func (t *Timer) SwitchPrevMode() {
 			t.Mode = ShortBreak
 		}
 	case LongBreak:
-		t.FinishedSessions++
+		t.FinishedSessions--
 		t.Mode = Pomodoro
 	case ShortBreak:
-		t.FinishedSessions++
+		t.FinishedSessions--
 		t.Mode = Pomodoro
 	}
   t.Reset()

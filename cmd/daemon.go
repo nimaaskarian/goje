@@ -26,7 +26,7 @@ type DaemonConfig struct {
 	BuffSize      uint   `mapstructure:"buff-size"`
 	NoWebgui      bool   `mapstructure:"no-webgui"`
 	NoOpenBrowser bool   `mapstructure:"no-open-browser"`
-	WritePath     string `mapstructure:"write-path"`
+	WriteFile     string `mapstructure:"write-path"`
 	Activitywatch bool
 	ExecEnd       string `mapstructure:"exec-end"`
 	ExecStart     string `mapstructure:"exec-start"`
@@ -59,7 +59,7 @@ func init() {
 	daemonCmd.PersistentFlags().UintVar(&config.BuffSize, "buff-size", 0, "size of buffer that tcp messages are parsed with")
 	daemonCmd.PersistentFlags().BoolVar(&config.NoOpenBrowser, "no-open-browser", false, "don't open the browser when running webgui")
 	daemonCmd.PersistentFlags().BoolVarP(&config.Activitywatch, "activitywatch", "", false, "daemon send's pomodoro data to activitywatch if is present")
-	daemonCmd.PersistentFlags().StringVar(&config.WritePath, "write-file", "w", "write timer events in a file at given path")
+	daemonCmd.PersistentFlags().StringVar(&config.WriteFile, "write-file", "", "write timer events in a file at given path")
 	viper.BindPFlags(daemonCmd.PersistentFlags())
 }
 
@@ -90,11 +90,11 @@ var daemonCmd = &cobra.Command{
 				exec.Command(config.ExecStart, string(content)).Run()
 			})
 		}
-		if config.WritePath != "" {
+		if config.WriteFile != "" {
 			writeChanges := func(event_callback func(payload any) timer.Event) func(t *timer.Timer) {
 				return func(t *timer.Timer) {
 					content, _ := json.Marshal(event_callback(t))
-					errout = os.WriteFile(config.WritePath, content, 0644)
+					errout = os.WriteFile(config.WriteFile, append(content, '\n'), 0644)
 				}
 			}
 			config.Timer.OnChange = append(config.Timer.OnChange, writeChanges(timer.OnChangeEvent))
