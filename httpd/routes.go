@@ -42,7 +42,7 @@ func (d *Daemon) JsonRoutes() {
     prev_mode := d.Timer.Mode
     if err := c.BindJSON(d.Timer); err == nil {
       if prev_mode != d.Timer.Mode {
-        d.Timer.Duration = d.Timer.Config.Duration[d.Timer.Mode]
+        d.Timer.Reset()
       }
       d.UpdateClients(d.ChangeEvent())
       c.JSON(http.StatusOK, d.Timer)

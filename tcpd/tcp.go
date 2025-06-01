@@ -257,21 +257,24 @@ func (d *Daemon) Run() {
 			continue
 		}
 		conn.Write([]byte("OK goje 0.0.1\n"))
-		for {
-			n, err := conn.Read(buff)
-			if err == io.EOF {
-				break
-			} else if err != nil {
-				slog.Warn("read throw error", "err", err)
-				continue
-			}
-			cmd, out, err := ParseInput(d.Timer, string(bytes.TrimSpace(buff[:n])))
-			if err != nil {
-				slog.Error("command throw error", "err", err)
-				conn.Write(fmt.Appendf(nil, "ACK {%s} %s\n", cmd, err))
-			} else {
-				conn.Write(append([]byte(out), []byte("OK\n")...))
-			}
-		}
+    go func() {
+      for {
+        defer conn.Close()
+        n, err := conn.Read(buff)
+        if err == io.EOF {
+          break
+        } else if err != nil {
+          slog.Warn("read throw error", "err", err)
+          continue
+        }
+        cmd, out, err := ParseInput(d.Timer, string(bytes.TrimSpace(buff[:n])))
+        if err != nil {
+          slog.Error("command throw error", "err", err)
+          conn.Write(fmt.Appendf(nil, "ACK {%s} %s\n", cmd, err))
+        } else {
+          conn.Write(append([]byte(out), []byte("OK\n")...))
+        }
+      }
+    }()
 	}
 }

@@ -21,7 +21,7 @@ export function App() {
   }, [])
   if (timer) {
     return (
-      <div class={"min-h-screen flex flex-col justify-center items-center bg-zinc-200 text-zinc-900 dark:text-white dark:bg-zinc-900" + (settings ? " overflow-hidden" : "")}>
+      <div class={"h-full flex flex-col justify-center items-center bg-zinc-200 text-zinc-900 dark:text-white dark:bg-zinc-900" + (settings ? " overflow-hidden" : "")}>
         <Settings onClose={() => setSettings(false)} timer={timer} hidden={!settings} sse={sse} />
         <button title="open settings" aria-label="open settings" onClick={() => setSettings(true)} class="absolute top-4 right-4 p-2 rounded dark:bg-zinc-800 bg-white shadow-sm hover:shadow-md transition ease-in-out duration-150 hover:text-zinc-600 hover:dark:text-zinc-300 cursor-pointer z-0">
           {cog_icon}
@@ -58,7 +58,7 @@ export function App() {
   }
   if (timer === null) {
     return (
-      <div class="min-h-screen flex flex-col justify-center items-center bg-zinc-200 text-zinc-900 dark:text-white dark:bg-zinc-900">
+      <div class="h-full flex flex-col justify-center items-center bg-zinc-200 text-zinc-900 dark:text-white dark:bg-zinc-900">
         Goje isn't running :(
       </div>
     )

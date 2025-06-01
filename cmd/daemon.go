@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -48,8 +49,8 @@ func init() {
 			"duration of "+lower+" sections of the timer",
 		)
 	}
-	daemonCmd.PersistentFlags().StringVar(&config.ExecEnd, "exec-start", "", "script to run when any timer mode starts (run's the script with json of timer as the first arguemnt)")
-	daemonCmd.PersistentFlags().StringVar(&config.ExecStart, "exec-end", "", "script to run when any timer mode ends (run's the script with json of timer as the first arguemnt)")
+	daemonCmd.PersistentFlags().StringVar(&config.ExecEnd, "exec-start", "", "command to run when any timer mode starts (run's the script with json of timer as the first arguemnt)")
+	daemonCmd.PersistentFlags().StringVar(&config.ExecStart, "exec-end", "", "command to run when any timer mode ends (run's the script with json of timer as the first arguemnt)")
 	viper.SetDefault("tcp-address", "localhost:7800")
 	viper.SetDefault("http-address", "localhost:7900")
 	viper.SetDefault("buff-size", 1024)
@@ -59,7 +60,7 @@ func init() {
 	daemonCmd.PersistentFlags().UintVar(&config.BuffSize, "buff-size", 0, "size of buffer that tcp messages are parsed with")
 	daemonCmd.PersistentFlags().BoolVar(&config.NoOpenBrowser, "no-open-browser", false, "don't open the browser when running webgui")
 	daemonCmd.PersistentFlags().BoolVarP(&config.Activitywatch, "activitywatch", "", false, "daemon send's pomodoro data to activitywatch if is present")
-	daemonCmd.PersistentFlags().StringVar(&config.WriteFile, "write-file", "", "write timer events in a file at given path")
+	daemonCmd.PersistentFlags().StringVarP(&config.WriteFile, "write-file","w", "", "write timer events in a file at given path")
 	viper.BindPFlags(daemonCmd.PersistentFlags())
 }
 
@@ -78,6 +79,7 @@ var daemonCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) (errout error) {
 		if config.ExecStart != "" {
 			config.Timer.OnModeStart = append(config.Timer.OnModeStart, func(t *timer.Timer) {
+        fmt.Println("oh hey. started!")
 				content, _ := json.Marshal(t)
 				if err := exec.Command(config.ExecStart, string(content)).Run(); err != nil {
 					log.Fatalln(err)
