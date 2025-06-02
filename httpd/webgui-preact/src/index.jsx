@@ -1,14 +1,25 @@
 import { render } from 'preact';
-import { useEffect, useMemo, useState } from 'preact/hooks';
+import { useMemo, useState } from 'preact/hooks';
+import { Settings } from "./settings"
+import { Button } from "./utils"
+import { postTimer, timerModeString } from "./timer"
 
 import './style.css';
 
+/**
+ * @typedef {import("./timer.js").Timer} Timer
+ */
+
 export function App() {
-  const [timer, setTimer] = useState(false)
-  const [settings, setSettings] = useState(undefined)
+  /** @type {[Timer, (timer: Timer) => void]} */
+  const [timer, setTimer] = useState(undefined)
+  const [settings, setSettings] = useState(false)
   const sse = useMemo(() => {
     const sse = new EventSource("/api/timer/stream")
     sse.addEventListener("change", (e) => {
+      setTimer(JSON.parse(e.data))
+    })
+    sse.addEventListener("pause", (e) => {
       setTimer(JSON.parse(e.data))
     })
     sse.onerror = _ => {
@@ -41,13 +52,13 @@ export function App() {
 
             <TimerCircle timer={timer} />
             <div class="flex justify-center gap-4">
-              <Button title="Previous mode" onClick={() => { postTimer(timer, "prevmode") }}>
+              <Button title="Previous mode" onClick={() => { postTimer(timer, "/prevmode") }}>
                 {prev_icon}
               </Button>
-              <Button title={`${timer.Paused ? "Resume" : "Pause"} timer`} onClick={() => { timer.Paused = !timer.Paused; postTimer(timer) }}>
+              <Button title={`${timer.Paused ? "Resume" : "Pause"} timer`} onClick={() => { postTimer(timer, "/pause") }}>
                 {timer.Paused ? play_icon : pause_icon}
               </Button>
-              <Button title="Next mode" onClick={() => { postTimer(timer, "nextmode") }}>
+              <Button title="Next mode" onClick={() => { postTimer(timer, "/nextmode") }}>
                 {next_icon}
               </Button>
             </div>
@@ -65,144 +76,17 @@ export function App() {
   }
 }
 
-function Settings(p) {
-  const duration = useMemo(() => [0, 1, 2].map(mode => formatDuration(p.timer.Config.Duration[mode])), [p.timer.Config.Duration])
-  useEffect(() => {
-    for (let type in ["start", "end"]) {
-      p.sse.addEventListener(type, (e) => {
-        const n = new Notification("Goje", { body: `${modeString(p.timer.Mode)} has started` });
-        document.addEventListener("visibilitychange", () => {
-          if (document.visibilityState === "visible") {
-            n.close();
-          }
-        });
-      })
-    }
-  }, [p.sse])
-  return (
-    <div class={"z-100 top-0 right-0 absolute flex min-w-full min-h-screen overflow-hidden" + (p.hidden ? " hidden" : "")}>
-      <div class="transition ease-in-out duration-300 grow bg-black/30" onClick={p.onClose} />
-      <div class="p-4 overflow-y-scroll transition-all bg-white dark:bg-zinc-800 rounded-l-lg shadow-md hover:shadow-lg ease-in-out duration-300 float-right h-screen text-wrap w-full md:w-70">
-        <div class="flex justify-end">
-          <Button onClick={p.onClose} title="close settings">{close_icon}</Button>
-        </div>
-        <form onSubmit={(e) => { e.preventDefault(); postTimer(p.timer) }} class="flex flex-col gap-4">
-          {[0, 1, 2].map((mode) =>
-            <div>
-              <label htmlFor={`timer-config-duration-${mode}`}>{modeString(mode)} duration</label>
-              <input id={`timer-config-duration-${mode}`}
-                class="rounded p-2 text-md bg-zinc-200 dark:bg-zinc-700 w-full"
-                type="text" value={duration[mode]}
-                onChange={(e) => p.timer.Config.Duration[mode] = parseDuration(e.target.value)}
-              />
-            </div>
-          )}
-          <div>
-            <label htmlFor="timer-config-sessions">Sessions</label>
-            <input id="timer-config-sessions"
-              class="rounded p-2 text-md bg-zinc-200 dark:bg-zinc-700 w-full"
-              type="text" value={p.timer.Config.Sessions}
-              onChange={(e) => p.timer.Config.Sessions = parseInt(e.target.value)}
-            />
-          </div>
-          <Radio id="timer-config-paused" checked={p.timer.Config.Paused} onChange={() => p.timer.Config.Paused = !p.timer.Config.Paused}>
-            is timer initially paused
-          </Radio>
-          <Radio id="webgui-notification" onChange={() => {
-            let notification = false;
-            Notification.requestPermission((result) => {
-              notification = result === "granted";
-            });
-          }}>
-            send notifications
-          </Radio>
-          <input type="submit" value="save" class="cursor-pointer p-2 rounded transition ease-in-out duration-300 dark:bg-zinc-900 dark:hover:text-zinc-300 hover:text-zinc-700 bg-zinc-200" />
-        </form>
-      </div>
-    </div>
-  );
-}
-
-function Radio(p) {
-  return (
-    <div class="flex items-center gap-2 box-border">
-      <input defaultChecked={p.checked} onChange={p.onChange} id={p.id} type="checkbox"
-        class="appearance-none
-        cursor-pointer
-        checked:dark:bg-zinc-500
-        dark:border-zinc-500
-        checked:bg-zinc-500
-        border-zinc-500
-        border-2
-        w-3.5
-        aspect-square
-        rounded-full
-    disabled:border-gray-400"
-      />
-      <label class="cursor-pointer" htmlFor={p.id}>{p.children}</label>
-    </div>
-  )
-}
-const ns_in_ms = 1_000_000
-const ns_in_s = 1_000_000_000
-const ns_in_m = ns_in_s * 60
-const ns_in_h = ns_in_m * 60
-
-function formatDuration(nanoseconds) {
-  let hours = (nanoseconds / ns_in_h) >> 0
-  nanoseconds %= ns_in_h
-  let minutes = (nanoseconds / ns_in_m) >> 0
-  nanoseconds %= ns_in_m
-  let seconds = (nanoseconds / ns_in_s) >> 0
-  nanoseconds %= ns_in_s
-  let miliseconds = (nanoseconds / ns_in_ms) >> 0
-  nanoseconds %= ns_in_ms
-  return [[hours, "h"], [minutes, "m"], [seconds, "s"], [miliseconds, "ms"], [nanoseconds, "ns"]].filter((e) => e[0]).flat().join("")
-}
-
-function parseDuration(str) {
-  let nanoseconds = 0
-  let nanoseconds_str = str.match(/(\d+)ns/)
-  if (nanoseconds_str) {
-    nanoseconds = parseInt(nanoseconds_str[1])
-  }
-  let miliseconds = str.match(/(\d+)ms/);
-  let seconds = str.match(/(\d+)s/);
-  let hours = str.match(/(\d+)h/);
-  let minutes = str.match(/(\d+)m(?!s)/);
-  if (hours) {
-    nanoseconds += parseInt(hours[1]) * ns_in_h;
-  } if (minutes) {
-    nanoseconds += parseInt(minutes[1]) * ns_in_m;
-  } if (seconds) {
-    nanoseconds += parseInt(seconds[1]) * ns_in_s
-  } if (miliseconds) {
-    nanoseconds += parseInt(miliseconds[1]) * ns_in_ms
-  }
-  return nanoseconds
-}
-
-// a button with customized styles that uses its children like a good normal element.
-// also sets the title prop as its aria-label as well. a11y yay
-function Button(props) {
-  return (
-    <button title={props.title} aria-label={props.title} onClick={props.onClick} class="cursor-pointer transition hover:text-zinc-600 hover:dark:text-zinc-300 ease-out">
-      {props.children}
-    </button>
-  );
-}
-
-function TimerCircle(props) {
+function TimerCircle(p) {
   const progress = useMemo(() => {
-    if (props.timer) {
-      const total_duration = props.timer.Config.Duration[props.timer.Mode]
-      return `${((total_duration - props.timer.Duration) / total_duration) * 100}%`
+    if (p.timer) {
+      const total_duration = p.timer.Config.Duration[p.timer.Mode]
+      return `${((total_duration - p.timer.Duration) / total_duration) * 100}%`
     }
-  }, [props.timer])
+  }, [p.timer])
   return (
     <div class="circle flex justify-center items-center" id="timer-circle" style={{ "--progress": progress }}>
       <div class="inner-circle flex justify-center items-center bg-white dark:bg-zinc-800">
-        <Timer timer={props.timer} />
+        <Timer timer={p.timer} />
       </div>
     </div>
   );
@@ -212,7 +96,7 @@ function ModeSelection(p) {
   const modeOptions = useMemo(() => {
     return [0, 1, 2].map((mode) =>
       <option value={mode} class="checked:dark:bg-zinc-700 checked:bg-zinc-300 hover:bg-zinc-300">
-        {modeString(mode)}
+        {timerModeString(mode)}
       </option>
     )
   }, [])
@@ -255,17 +139,6 @@ function Timer(props) {
   );
 }
 
-function modeString(mode) {
-  switch (mode) {
-    case 0:
-      return "Pomodoro"
-    case 1:
-      return "Short Break"
-    case 2:
-      return "Long Break"
-  }
-}
-
 const pause_icon = <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="size-10">
   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" />
 </svg>
@@ -294,17 +167,5 @@ const plus_icon = <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fi
   <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
 </svg>
 
-const close_icon = <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" class="size-6">
-  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
-</svg>
-
-
-function postTimer(timer, endpoint) {
-  let xhr = new XMLHttpRequest();
-  xhr.open("POST", '/api/timer' + (endpoint ? "/" + endpoint : ""), true);
-  xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8")
-  xhr.responseType = 'json'
-  xhr.send(JSON.stringify(timer));
-}
 
 render(<App />, document.getElementById('app'));

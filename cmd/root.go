@@ -32,6 +32,7 @@ type AppConfig struct {
 	Activitywatch bool
 	ExecEnd       string `mapstructure:"exec-end"`
 	ExecStart     string `mapstructure:"exec-start"`
+	ExecPause     string `mapstructure:"exec-pause"`
 	Timer         timer.TimerConfig
 }
 
@@ -52,6 +53,7 @@ func init() {
 	}
 	rootCmd.PersistentFlags().StringVar(&config.ExecEnd, "exec-start", "", "command to run when any timer mode starts (run's the script with json of timer as the first arguemnt)")
 	rootCmd.PersistentFlags().StringVar(&config.ExecStart, "exec-end", "", "command to run when any timer mode ends (run's the script with json of timer as the first arguemnt)")
+	rootCmd.PersistentFlags().StringVar(&config.ExecPause, "exec-pause", "", "command to run when timer (un)pauses")
 	viper.SetDefault("tcp-address", "localhost:7800")
 	viper.SetDefault("http-address", "localhost:7900")
 	viper.SetDefault("buff-size", 1024)
@@ -73,15 +75,15 @@ var rootCmd = &cobra.Command{
 	SilenceUsage:      true,
 	PersistentPreRunE: readConfig,
 	RunE: func(cmd *cobra.Command, args []string) error {
-    if err := runDaemons(); err != nil {
-      return err
-    }
-    sig := make(chan os.Signal, 1)
-    signal.Notify(sig, syscall.SIGHUP)
-    for {
-      <-sig
-      readConfig(cmd, args)
-    }
+		if err := runDaemons(); err != nil {
+			return err
+		}
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, syscall.SIGHUP)
+		for {
+			<-sig
+			readConfig(cmd, args)
+		}
 	},
 }
 
@@ -112,6 +114,12 @@ func runDaemons() (errout error) {
 		config.Timer.OnModeEnd = append(config.Timer.OnModeEnd, func(t *timer.Timer) {
 			content, _ := json.Marshal(t)
 			exec.Command(config.ExecStart, string(content)).Run()
+		})
+	}
+	if config.ExecPause != "" {
+		config.Timer.OnPause = append(config.Timer.OnPause, func(t *timer.Timer) {
+			content, _ := json.Marshal(t)
+			exec.Command(config.ExecPause, string(content)).Run()
 		})
 	}
 	if config.WriteFile != "" {

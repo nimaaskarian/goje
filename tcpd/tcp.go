@@ -95,7 +95,6 @@ func pauseCmd(timer *timer.Timer, args []string) (string, error) {
 		if err != nil {
 			return "", err
 		} else {
-			timer.OnChange()
       timer.OnPause()
 		}
 	default:

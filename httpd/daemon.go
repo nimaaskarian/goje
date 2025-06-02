@@ -17,8 +17,8 @@ type Daemon struct {
 	Clients      *sync.Map
 }
 
-func (d *Daemon) UpdateAllChangeEvent(timer *timer.Timer) {
-  d.UpdateClients(d.ChangeEvent())
+func (d *Daemon) UpdateAllChangeEvent(t *timer.Timer) {
+  d.UpdateClients(timer.OnChangeEvent(t))
 }
 
 func (d *Daemon) SetupEndStartEvents() {
@@ -28,13 +28,9 @@ func (d *Daemon) SetupEndStartEvents() {
   d.Timer.Config.OnModeEnd = append(d.Timer.Config.OnModeEnd, func(t *timer.Timer) {
     d.UpdateClients(timer.OnChangeEvent(t))
   })
-}
-
-func (d *Daemon) ChangeEvent() timer.Event {
-	return timer.Event{
-		Name:    "change",
-		Payload: d.Timer,
-	}
+  d.Timer.Config.OnPause = append(d.Timer.Config.OnPause, func(t *timer.Timer) {
+    d.UpdateClients(timer.OnPauseEvent(t))
+  })
 }
 
 func (d *Daemon) UpdateClients(e timer.Event) {

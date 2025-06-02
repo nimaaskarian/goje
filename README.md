@@ -1,2 +1,3 @@
-# tom
-a client/server pomodoro timer. all that you fucking need
+# goje
+an event-based pomodoro timer server that works out of the box, but doesn't
+sacerfice on nerdy micro optimizations.

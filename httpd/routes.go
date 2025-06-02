@@ -22,19 +22,16 @@ func (d *Daemon) JsonRoutes() {
 	d.router.POST("/api/timer/nextmode", func(c *gin.Context) {
 		c.Header("Cache-Control", "no-cache")
     d.Timer.SwitchNextMode()
-    d.UpdateClients(d.ChangeEvent())
     c.JSON(http.StatusOK, d.Timer)
 	})
 	d.router.POST("/api/timer/pause", func(c *gin.Context) {
 		c.Header("Cache-Control", "no-cache")
     d.Timer.Pause()
-    d.UpdateClients(d.ChangeEvent())
     c.JSON(http.StatusOK, d.Timer)
 	})
 	d.router.POST("/api/timer/prevmode", func(c *gin.Context) {
 		c.Header("Cache-Control", "no-cache")
     d.Timer.SwitchPrevMode()
-    d.UpdateClients(d.ChangeEvent())
     c.JSON(http.StatusOK, d.Timer)
 	})
 	d.router.POST("/api/timer", func(c *gin.Context) {
@@ -44,7 +41,7 @@ func (d *Daemon) JsonRoutes() {
       if prev_mode != d.Timer.Mode {
         d.Timer.Reset()
       }
-      d.UpdateClients(d.ChangeEvent())
+      d.UpdateClients(timer.OnChangeEvent(d.Timer))
       c.JSON(http.StatusOK, d.Timer)
     }
 	})
@@ -55,7 +52,7 @@ func (d *Daemon) JsonRoutes() {
     c.Header("Connection", "keep-alive")
     c.Header("Transfer-Encoding", "chunked")
 		client := make(chan timer.Event, 1)
-		client <- d.ChangeEvent()
+		client <- timer.OnChangeEvent(d.Timer)
 		d.lastId++
 		id := d.lastId
 		d.Clients.Store(id, client)
