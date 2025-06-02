@@ -1,6 +1,10 @@
 config:
     task: add config in webgui option
+    done: true
     created-at: 2025-05-30T15:13:32.760516906+03:30
+    done-at: 2025-06-02T08:10:53.201578219+03:30
 mutex:
     task: add a mutex for deleting clients
+    done: true
     created-at: 2025-05-30T15:12:54.527060172+03:30
+    done-at: 2025-06-02T08:10:53.201578219+03:30
