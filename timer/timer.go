@@ -62,10 +62,16 @@ func (t *Timer) SetConfig(config *TimerConfig) {
 }
 
 func (t *Timer) Init() {
+  t.naiveInit()
+  t.Reset()
+}
+
+// naive init inits the timer to initial state without setting the current time
+// nor firing the start event
+func (t *Timer) naiveInit() {
 	t.Mode = Pomodoro
 	t.FinishedSessions = 0
 	t.Paused = t.Config.Paused
-	t.Reset()
 }
 
 func (t *Timer) OnChange() {
@@ -141,7 +147,7 @@ func (t *Timer) SwitchNextMode() {
 			t.Mode = ShortBreak
 		}
 	case LongBreak:
-		t.Init()
+		t.naiveInit()
 	case ShortBreak:
 		t.Mode = Pomodoro
 	}

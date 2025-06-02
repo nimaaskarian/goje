@@ -136,12 +136,12 @@ func runDaemons() (errout error) {
 	if config.Activitywatch {
 		activitywatch.SetupTimerConfig(&config.Timer)
 	}
-	tomato := timer.Timer{}
-	tomato.SetConfig(&config.Timer)
+	t := timer.Timer{}
+	t.SetConfig(&config.Timer)
 
 	if config.TcpAddress != "" {
 		tcp_daemon := tcpd.Daemon{
-			Timer:    &tomato,
+			Timer:    &t,
 			Buffsize: config.BuffSize,
 		}
 		if err := tcp_daemon.InitializeListener(config.TcpAddress); err != nil {
@@ -151,7 +151,7 @@ func runDaemons() (errout error) {
 	}
 	if config.HttpAddress != "" {
 		http_deamon := httpd.Daemon{
-			Timer:   &tomato,
+			Timer:   &t,
 			Clients: &sync.Map{},
 		}
 		config.Timer.OnChange = append(config.Timer.OnChange, http_deamon.UpdateAllChangeEvent)
@@ -165,8 +165,8 @@ func runDaemons() (errout error) {
 			errout = http_deamon.Run(config.HttpAddress)
 		}()
 	}
-	tomato.Init()
-	go tomato.Loop()
+	t.Init()
+	go t.Loop()
 	return nil
 }
 

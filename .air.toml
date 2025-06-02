@@ -1,7 +1,7 @@
 root = "."
 
 [build]
-bin = "./goje daemon"
+bin = "./goje_linux_amd64"
 cmd = "make"
 delay = 1000
 exclude_dir = ["./httpd/webgui-preact/node_modules"]
