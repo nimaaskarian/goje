@@ -113,7 +113,7 @@ func runDaemons() (errout error) {
 	if config.ExecEnd != "" {
 		config.Timer.OnModeEnd = append(config.Timer.OnModeEnd, func(t *timer.Timer) {
 			content, _ := json.Marshal(t)
-			exec.Command(config.ExecStart, string(content)).Run()
+			exec.Command(config.ExecEnd, string(content)).Run()
 		})
 	}
 	if config.ExecPause != "" {
