@@ -3,10 +3,7 @@ git tag "$1" || {
   last_tag=$(git tag | tail -n 2 | head -n 1)
   git checkout "$1"
 }
-go test ./... -coverprofile=coverage.out || {
-  exit 1
-}
-go run build_release.go "$1"
+make
 files=(goje goje.exe goje_android_arm64)
 zip_files=()
 for file in "${files[@]}"; do
