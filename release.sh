@@ -4,7 +4,7 @@ git tag "$1" || {
   git checkout "$1"
 }
 make
-files=(goje goje.exe goje_android_arm64)
+files=(goje_linux_amd64 goje_windows_amd64.exe goje_android_arm64)
 zip_files=()
 for file in "${files[@]}"; do
   if [[ $file = *.exe ]]; then
@@ -16,6 +16,6 @@ for file in "${files[@]}"; do
   fi
   zip_files+=("$out")
 done
-gh release create "$1" "${zip_files[@]}"  --title "$1" --notes "**Full Changelog**: https://github.com/nimaaskarian/goje/compare/$last_tag...$1" --repo nimaaskarian/ydo
+gh release create "$1" "${zip_files[@]}"  --title "$1" --notes "**Full Changelog**: https://github.com/nimaaskarian/goje/compare/$last_tag...$1" --repo nimaaskarian/goje
 rm "${files[@]}" "${zip_files[@]}"
 git checkout master
