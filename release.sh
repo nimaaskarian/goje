@@ -9,11 +9,16 @@ zip_files=()
 for file in "${files[@]}"; do
   if [[ $file = *.exe ]]; then
     out="${file%.*}.zip"
-    zip "$out" "$file" "./goje-launcher.bat" || exit 1
+    tmp=goje.exe
+    mv "$file" $tmp
+    zip "$out" $tmp "./goje-launcher.bat" || exit 1
   else
     out="$file.bz2"
-    bzip2 -c "$file" > "$out" || exit 1
+    tmp=goje
+    mv "$file" $tmp
+    bzip2 -c $tmp > "$out" || exit 1
   fi
+  rm $tmp
   zip_files+=("$out")
 done
 gh release create "$1" "${zip_files[@]}"  --title "$1" --notes "**Full Changelog**: https://github.com/nimaaskarian/goje/compare/$last_tag...$1" --repo nimaaskarian/goje
