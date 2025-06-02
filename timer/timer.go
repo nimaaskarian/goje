@@ -72,6 +72,9 @@ func (t *Timer) naiveInit() {
 	t.Mode = Pomodoro
 	t.FinishedSessions = 0
 	t.Paused = t.Config.Paused
+  if t.Paused {
+    t.OnPause()
+  }
 }
 
 func (t *Timer) OnChange() {
