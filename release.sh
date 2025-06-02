@@ -9,10 +9,10 @@ zip_files=()
 for file in "${files[@]}"; do
   if [[ $file = *.exe ]]; then
     out="${file%.*}.zip"
-    zip "$out" "$file" "./goje-launcher.bat"
+    zip "$out" "$file" "./goje-launcher.bat" || exit 1
   else
     out="$file.bz2"
-    bzip2 -c "$file" > "$out"
+    bzip2 -c "$file" > "$out" || exit 1
   fi
   zip_files+=("$out")
 done
