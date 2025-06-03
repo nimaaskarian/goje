@@ -33,7 +33,9 @@ type AppConfig struct {
 	ExecEnd       string `mapstructure:"exec-end"`
 	ExecStart     string `mapstructure:"exec-start"`
 	ExecPause     string `mapstructure:"exec-pause"`
+	CustomCss     string `mapstructure:"custom-css"`
 	Timer         timer.TimerConfig
+	http_deamon   *httpd.Daemon
 }
 
 var config = AppConfig{Timer: timer.DefaultConfig}
@@ -51,6 +53,7 @@ func init() {
 			"duration of "+lower+" sections of the timer",
 		)
 	}
+	rootCmd.PersistentFlags().StringVar(&config.CustomCss, "custom-css", "", "a custom css file to load on the website")
 	rootCmd.PersistentFlags().StringVar(&config.ExecEnd, "exec-start", "", "command to run when any timer mode starts (run's the script with json of timer as the first arguemnt)")
 	rootCmd.PersistentFlags().StringVar(&config.ExecStart, "exec-end", "", "command to run when any timer mode ends (run's the script with json of timer as the first arguemnt)")
 	rootCmd.PersistentFlags().StringVar(&config.ExecPause, "exec-pause", "", "command to run when timer (un)pauses")
@@ -65,6 +68,16 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&config.Activitywatch, "activitywatch", "", false, "daemon send's pomodoro data to activitywatch if is present")
 	rootCmd.PersistentFlags().StringVarP(&config.WriteFile, "write-file", "w", "", "write timer events in a file at given path")
 	viper.BindPFlags(rootCmd.PersistentFlags())
+}
+
+type SigEvent struct {
+  name string
+}
+func (e SigEvent) Payload() any {
+  return nil
+}
+func (e SigEvent) Name() string {
+  return e.name
 }
 
 var rootCmd = &cobra.Command{
@@ -83,6 +96,9 @@ var rootCmd = &cobra.Command{
 		for {
 			<-sig
 			readConfig(cmd, args)
+      config.http_deamon.UpdateClients(SigEvent { 
+        name: "restart",
+      })
 		}
 	},
 }
@@ -134,9 +150,9 @@ func runDaemons() (errout error) {
 		config.Timer.OnModeStart = append(config.Timer.OnChange, writeChanges(timer.OnModeStartEvent))
 	}
 	if config.Activitywatch {
-    aw_data := activitywatch.Data{} 
-    aw_data.Init()
-    aw_data.AddEventWatchers(&config.Timer)
+		aw_data := activitywatch.Data{}
+		aw_data.Init()
+		aw_data.AddEventWatchers(&config.Timer)
 	}
 	t := timer.Timer{}
 	t.SetConfig(&config.Timer)
@@ -152,19 +168,19 @@ func runDaemons() (errout error) {
 		go tcp_daemon.Run()
 	}
 	if config.HttpAddress != "" {
-		http_deamon := httpd.Daemon{
+		config.http_deamon = &httpd.Daemon{
 			Timer:   &t,
 			Clients: &sync.Map{},
 		}
-		config.Timer.OnChange = append(config.Timer.OnChange, http_deamon.UpdateAllChangeEvent)
-		http_deamon.SetupEndStartEvents()
-		http_deamon.Init()
-		http_deamon.JsonRoutes()
+		config.Timer.OnChange = append(config.Timer.OnChange, config.http_deamon.UpdateAllChangeEvent)
+		config.http_deamon.SetupEndStartEvents()
+		config.http_deamon.Init()
+		config.http_deamon.JsonRoutes()
 		if !config.NoWebgui {
-			go runWebgui(&http_deamon)
+			go runWebgui()
 		}
 		go func() {
-			errout = http_deamon.Run(config.HttpAddress)
+			errout = config.http_deamon.Run(config.HttpAddress)
 		}()
 	}
 	t.Init()
@@ -172,8 +188,8 @@ func runDaemons() (errout error) {
 	return nil
 }
 
-func runWebgui(http_deamon *httpd.Daemon) {
-	http_deamon.WebguiRoutes()
+func runWebgui() {
+	config.http_deamon.WebguiRoutes(config.CustomCss)
 	if !config.NoOpenBrowser {
 		if strings.HasPrefix(config.HttpAddress, "http://") {
 			utils.OpenURL(config.HttpAddress)

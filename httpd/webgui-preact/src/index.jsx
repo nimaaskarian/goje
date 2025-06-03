@@ -22,6 +22,9 @@ export function App() {
     sse.addEventListener("pause", (e) => {
       setTimer(JSON.parse(e.data))
     })
+    sse.addEventListener("restart", () => {
+      window.location.reload()
+    })
     sse.onerror = _ => {
       setTimer(null)
     }

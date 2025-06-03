@@ -17,8 +17,8 @@ export function Settings(p) {
     }
   }, [p.sse])
   return (
-    <div class={"z-100 top-0 right-0 absolute flex min-w-full min-h-screen overflow-hidden" + (p.hidden ? " hidden" : "")}>
-      <div class="transition ease-in-out duration-300 grow bg-black/30" onClick={p.onClose} />
+    <div id="settings-wrapper" class={"z-100 top-0 right-0 absolute flex min-w-full min-h-screen overflow-hidden" + (p.hidden ? " hidden" : "")}>
+      <div id="settings-overlay" class="transition ease-in-out duration-300 grow bg-black/30" onClick={p.onClose} />
       <div class="p-4 overflow-y-scroll transition-all bg-white dark:bg-zinc-800 rounded-l-lg shadow-md hover:shadow-lg ease-in-out duration-300 float-right h-screen text-wrap w-full md:w-70">
         <div class="flex justify-end">
           <Button onClick={p.onClose} title="close settings">{close_icon}</Button>

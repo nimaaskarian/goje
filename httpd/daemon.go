@@ -7,43 +7,46 @@ import (
 	"github.com/nimaaskarian/goje/timer"
 )
 
-type ClientsMap *sync.Map
-
 type Daemon struct {
-	router       *gin.Engine
-	Timer        *timer.Timer
-	lastId       uint
-	ClosingIds   chan uint
-	Clients      *sync.Map
+	router     *gin.Engine
+	Timer      *timer.Timer
+	lastId     uint
+	ClosingIds chan uint
+	Clients    *sync.Map
 }
 
 func (d *Daemon) UpdateAllChangeEvent(t *timer.Timer) {
-  d.UpdateClients(timer.OnChangeEvent(t))
+	d.UpdateClients(timer.OnChangeEvent(t))
 }
 
 func (d *Daemon) SetupEndStartEvents() {
-  d.Timer.Config.OnModeStart = append(d.Timer.Config.OnModeStart, func(t *timer.Timer) {
-    d.UpdateClients(timer.OnModeStartEvent(t))
-  })
-  d.Timer.Config.OnModeEnd = append(d.Timer.Config.OnModeEnd, func(t *timer.Timer) {
-    d.UpdateClients(timer.OnChangeEvent(t))
-  })
-  d.Timer.Config.OnPause = append(d.Timer.Config.OnPause, func(t *timer.Timer) {
-    d.UpdateClients(timer.OnPauseEvent(t))
-  })
+	d.Timer.Config.OnModeStart = append(d.Timer.Config.OnModeStart, func(t *timer.Timer) {
+		d.UpdateClients(timer.OnModeStartEvent(t))
+	})
+	d.Timer.Config.OnModeEnd = append(d.Timer.Config.OnModeEnd, func(t *timer.Timer) {
+		d.UpdateClients(timer.OnChangeEvent(t))
+	})
+	d.Timer.Config.OnPause = append(d.Timer.Config.OnPause, func(t *timer.Timer) {
+		d.UpdateClients(timer.OnPauseEvent(t))
+	})
 }
 
-func (d *Daemon) UpdateClients(e timer.Event) {
-  d.Clients.Range(func(id any, value any) (closed bool) {
-    client := value.(chan timer.Event)
+type Event interface {
+	Payload() any
+	Name() string
+}
+
+func (d *Daemon) UpdateClients(e Event) {
+	d.Clients.Range(func(id any, value any) (closed bool) {
+		client := value.(chan Event)
 		defer func() {
 			if recover() != nil {
 				closed = false
 			}
 		}()
 		client <- e
-    return true
-  })
+		return true
+	})
 }
 
 func (d *Daemon) Init() {
