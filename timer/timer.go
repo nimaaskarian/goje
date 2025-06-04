@@ -52,7 +52,7 @@ func (t *Timer) Reset() {
 func (t *Timer) onStart() {
 	if t.Config.OnModeStart != nil {
 		for _, onStart := range t.Config.OnModeStart {
-			go onStart(t)
+			onStart(t)
 		}
 	}
 }
@@ -80,7 +80,7 @@ func (t *Timer) naiveInit() {
 func (t *Timer) OnChange() {
 	if t.Config.OnChange != nil {
 		for _, onChange := range t.Config.OnChange {
-			go onChange(t)
+			onChange(t)
 		}
 	}
 }
@@ -93,7 +93,7 @@ func (t *Timer) Pause() {
 func (t *Timer) OnPause() {
 	if t.Config.OnPause != nil {
     for _, onPause := range t.Config.OnPause {
-      go onPause(t)
+      onPause(t)
     }
   }
 }
@@ -115,7 +115,7 @@ func (t *Timer) SeekAdd(duration time.Duration) {
 func (t *Timer) onEnd() {
 	if t.Config.OnModeEnd != nil {
 		for _, onEnd := range t.Config.OnModeEnd {
-			go onEnd(t)
+			onEnd(t)
 		}
 	}
 }

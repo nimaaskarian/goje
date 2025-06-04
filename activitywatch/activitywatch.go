@@ -9,14 +9,14 @@ import (
 
 const EVENT_TYPE = "pomodoro_status"
 
-type Data struct {
+type Watcher struct {
 	paused_start time.Time
 	started      time.Time
 	client       aw_go.ActivityWatchClient
 	bucket_id    string
 }
 
-func (d *Data) Init() {
+func (d *Watcher) Init() {
 	d.client = aw_go.ActivityWatchClient{
 		Config: aw_go.ActivityWatchClientConfig{
 			Protocol: "http",
@@ -30,7 +30,7 @@ func (d *Data) Init() {
 	d.client.CreateBucket(d.bucket_id, EVENT_TYPE)
 }
 
-func (d *Data) pushCurrentMode(t *timer.Timer, now time.Time) {
+func (d *Watcher) pushCurrentMode(t *timer.Timer, now time.Time) {
 	duration := now.UTC().Sub(d.started)
 	mode_string := t.Mode.String()
 	event := aw_go.Event{
@@ -44,7 +44,7 @@ func (d *Data) pushCurrentMode(t *timer.Timer, now time.Time) {
 	d.client.InsertEvent(d.bucket_id, event)
 }
 
-func (d *Data) AddEventWatchers(config *timer.TimerConfig) {
+func (d *Watcher) AddEventWatchers(config *timer.TimerConfig) {
 	config.OnModeStart = append(config.OnModeStart, func(t *timer.Timer) {
 		d.started = time.Now().UTC()
 	})

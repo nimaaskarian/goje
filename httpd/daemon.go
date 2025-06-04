@@ -52,9 +52,6 @@ func (d *Daemon) UpdateClients(e Event) {
 func (d *Daemon) Init() {
 	gin.SetMode(gin.ReleaseMode)
 	d.router = gin.Default()
-	d.router.Use(func(c *gin.Context) {
-		c.Writer.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
-	})
 }
 
 func (d *Daemon) Run(address string) error {

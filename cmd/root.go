@@ -150,9 +150,9 @@ func runDaemons() (errout error) {
 		config.Timer.OnModeStart = append(config.Timer.OnChange, writeChanges(timer.OnModeStartEvent))
 	}
 	if config.Activitywatch {
-		aw_data := activitywatch.Data{}
-		aw_data.Init()
-		aw_data.AddEventWatchers(&config.Timer)
+		aw := activitywatch.Watcher{}
+		aw.Init()
+		aw.AddEventWatchers(&config.Timer)
 	}
 	t := timer.Timer{}
 	t.SetConfig(&config.Timer)

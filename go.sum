@@ -61,6 +61,16 @@ github.com/nimaaskarian/aw-go v0.1.10 h1:N+kd5NHDpKQ/+2m+vJkOs2M//C1Klb3XBMJlBNd
 github.com/nimaaskarian/aw-go v0.1.10/go.mod h1:IbT5oc6quLwgxK5taQkz/wc+Z7kgtOy7ZawvX3yd7g8=
 github.com/nimaaskarian/aw-go v0.1.12 h1:z4Z/hbbLO9epXbX5TqguYojJgliBbVfiaGxnPZldsAk=
 github.com/nimaaskarian/aw-go v0.1.12/go.mod h1:IbT5oc6quLwgxK5taQkz/wc+Z7kgtOy7ZawvX3yd7g8=
+github.com/nimaaskarian/aw-go v0.1.13 h1:7t+G6FMN5gc8M7i46FFTowzuWwUTXwXbuIev6weJLKA=
+github.com/nimaaskarian/aw-go v0.1.13/go.mod h1:IbT5oc6quLwgxK5taQkz/wc+Z7kgtOy7ZawvX3yd7g8=
+github.com/nimaaskarian/aw-go v0.1.14 h1:QKJB2b5fpyeCm0ogpwQSEhgo4Hpe5J9YUQWvM5sZLBA=
+github.com/nimaaskarian/aw-go v0.1.14/go.mod h1:IbT5oc6quLwgxK5taQkz/wc+Z7kgtOy7ZawvX3yd7g8=
+github.com/nimaaskarian/aw-go v0.1.15 h1:43TVaJclzmBHk27htiWrF2PgHOVIZ8y74Sormfxgpqw=
+github.com/nimaaskarian/aw-go v0.1.15/go.mod h1:IbT5oc6quLwgxK5taQkz/wc+Z7kgtOy7ZawvX3yd7g8=
+github.com/nimaaskarian/aw-go v0.1.16 h1:LXYKji2zFfLOQMCVBbM7SesbUyKlr4Y7W5GiOOWR8bQ=
+github.com/nimaaskarian/aw-go v0.1.16/go.mod h1:IbT5oc6quLwgxK5taQkz/wc+Z7kgtOy7ZawvX3yd7g8=
+github.com/nimaaskarian/aw-go v0.1.17 h1:Qoh4teRm62r6kYNdBOu3sOuIvi3q8AKhyZ63t7AUsKk=
+github.com/nimaaskarian/aw-go v0.1.17/go.mod h1:IbT5oc6quLwgxK5taQkz/wc+Z7kgtOy7ZawvX3yd7g8=
 github.com/pelletier/go-toml/v2 v2.2.3 h1:YmeHyLY8mFWbdkNWwpr+qIL2bEqT0o95WSdkNHvL12M=
 github.com/pelletier/go-toml/v2 v2.2.3/go.mod h1:MfCQTFTvCcUyyvvwm1+G6H/jORL20Xlb6rzQu9GuUkc=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

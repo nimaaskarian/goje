@@ -4,7 +4,7 @@ go 1.24.3
 
 require (
 	github.com/gin-gonic/gin v1.10.1
-	github.com/nimaaskarian/aw-go v0.1.12
+	github.com/nimaaskarian/aw-go v0.1.17
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 )
