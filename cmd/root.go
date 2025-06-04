@@ -53,13 +53,13 @@ func init() {
 			"duration of "+lower+" sections of the timer",
 		)
 	}
+	viper.SetDefault("tcp-address", "localhost:7800")
+	viper.SetDefault("http-address", "localhost:7900")
+	viper.SetDefault("buff-size", 1024)
 	rootCmd.PersistentFlags().StringVar(&config.CustomCss, "custom-css", "", "a custom css file to load on the website")
 	rootCmd.PersistentFlags().StringVar(&config.ExecEnd, "exec-start", "", "command to run when any timer mode starts (run's the script with json of timer as the first arguemnt)")
 	rootCmd.PersistentFlags().StringVar(&config.ExecStart, "exec-end", "", "command to run when any timer mode ends (run's the script with json of timer as the first arguemnt)")
 	rootCmd.PersistentFlags().StringVar(&config.ExecPause, "exec-pause", "", "command to run when timer (un)pauses")
-	viper.SetDefault("tcp-address", "localhost:7800")
-	viper.SetDefault("http-address", "localhost:7900")
-	viper.SetDefault("buff-size", 1024)
 	rootCmd.PersistentFlags().StringVarP(&config.TcpAddress, "tcp-address", "a", "", "address:[port] for tcp pomodoro daemon (doesn't run when empty)")
 	rootCmd.PersistentFlags().StringVarP(&config.HttpAddress, "http-address", "A", "", "address:[port] for http pomodoro api (doesn't run when empty)")
 	rootCmd.PersistentFlags().BoolVar(&config.NoWebgui, "no-webgui", false, "don't run webgui. webgui can't be run without the json server")
@@ -68,6 +68,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&config.Activitywatch, "activitywatch", "", false, "daemon send's pomodoro data to activitywatch if is present")
 	rootCmd.PersistentFlags().StringVarP(&config.WriteFile, "write-file", "w", "", "write timer events in a file at given path")
 	viper.BindPFlags(rootCmd.PersistentFlags())
+  readConfig()
 }
 
 type SigEvent struct {
@@ -86,7 +87,6 @@ var rootCmd = &cobra.Command{
 	Long:              "goje is a pomodoro timer server with modern features, suitable for both everyday users and computer nerds",
 	SilenceErrors:     true,
 	SilenceUsage:      true,
-	PersistentPreRunE: readConfig,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := runDaemons(); err != nil {
 			return err
@@ -95,7 +95,7 @@ var rootCmd = &cobra.Command{
 		signal.Notify(sig, syscall.SIGHUP)
 		for {
 			<-sig
-			readConfig(cmd, args)
+			readConfig()
       config.http_deamon.UpdateClients(SigEvent { 
         name: "restart",
       })
@@ -103,7 +103,7 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-func readConfig(cmd *cobra.Command, args []string) error {
+func readConfig() error {
 	if config_file != "" {
 		viper.SetConfigFile(config_file)
 	} else {
