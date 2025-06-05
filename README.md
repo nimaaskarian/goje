@@ -52,7 +52,8 @@ to use prebuilt binaries, checkout [releases](https://github.com/nimaaskarian/go
 after [installation](#installation), you can run goje on command line using
 `goje`. or if you're on windows, you can download the [launcher batch
 script](https://github.com/nimaaskarian/goje/blob/master/goje-launcher.bat) to
-run goje with a single click.
+run goje with a single click. this already comes with the [prebuilt binary
+version](#prebuilt-binary)
 
 ## Usage
 if the guides here wasn't enough, or the config options are still unclear,
