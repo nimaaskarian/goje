@@ -11,16 +11,31 @@ goje (/ˈɡoʊ.dʒɛ/, meaning tomato in Persian) is an event-based pomodoro ser
 [Usage](#usage)
 </div>
 
-## Features
-### Webgui
-webgui is intuitive and easy to use. the server listens to `localhost:7900` for
-it by default.
+## Disclaimer
+goje is highly in development. i'll try my best not to change the current API, but it will inevitably change.
 
-## ActivityWatch watcher
+## Features
+
+### Webgui
+webgui is intuitive and easy to use. its run by default, and opens in your browser. it supports both light and dark mode, and uses your default browser theme.
+![goje dark mode](https://github.com/user-attachments/assets/a31a8e00-22b6-4b6f-87a1-4a7bc8e0851e)
+
+
+#### Custom css
+if you don't like the default style of goje, you can use ``--custom-css` option and pass a custom css file to it.
+here's a [pywal-themed](https://github.com/nimaaskarian/goje/wiki/Pywal-integration) goje using this feature:
+
+![pywal-themed goje using custom css](https://github.com/user-attachments/assets/d00fa5cd-ab5d-442f-a195-1b233283b896)
+
+
+
+## ActivityWatch
 You can turn on the activitywatch watcher using the config option `activitywatch` (`--activitywatch` cli argument) 
+![activitywatch bucket](https://github.com/user-attachments/assets/3bd1ffc6-1cc7-4a6a-a110-728ee1823507)
 
 ## Installation
-### from source
+
+### From source
 clone the repository, and run `make` to install dependencies and compile, or
 `sudo make install` to compile and install. note that `go build` won't suffice.
 Use `make`.
@@ -30,7 +45,7 @@ git clone https://github.com/nimaaskarian/goje
 sudo make install
 ```
 
-### binary
+### Prebuilt binary
 to use prebuilt binaries, checkout [releases](https://github.com/nimaaskarian/goje/releases).
 
 ## Getting started
