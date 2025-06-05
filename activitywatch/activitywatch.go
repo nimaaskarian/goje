@@ -45,15 +45,15 @@ func (d *Watcher) pushCurrentMode(t *timer.Timer, now time.Time) {
 }
 
 func (d *Watcher) AddEventWatchers(config *timer.TimerConfig) {
-	config.OnModeStart = append(config.OnModeStart, func(t *timer.Timer) {
+	config.OnModeStart.Append(func(t *timer.Timer) {
 		d.started = time.Now().UTC()
 	})
-	config.OnModeEnd = append(config.OnModeEnd, func(t *timer.Timer) {
+	config.OnModeEnd.Append(func(t *timer.Timer) {
 		d.pushCurrentMode(t, time.Now().UTC())
 	})
-	config.OnPause = append(config.OnPause, func(t *timer.Timer) {
+	config.OnPause.Append(func(t *timer.Timer) {
 		if t.Paused {
-      now := time.Now().UTC()
+			now := time.Now().UTC()
 			d.paused_start = now
 			d.pushCurrentMode(t, now)
 		} else {

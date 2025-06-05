@@ -68,25 +68,26 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&config.Activitywatch, "activitywatch", "", false, "daemon send's pomodoro data to activitywatch if is present")
 	rootCmd.PersistentFlags().StringVarP(&config.WriteFile, "write-file", "w", "", "write timer events in a file at given path")
 	viper.BindPFlags(rootCmd.PersistentFlags())
-  readConfig()
+	readConfig()
 }
 
 type SigEvent struct {
-  name string
+	name string
 }
+
 func (e SigEvent) Payload() any {
-  return nil
+	return nil
 }
 func (e SigEvent) Name() string {
-  return e.name
+	return e.name
 }
 
 var rootCmd = &cobra.Command{
-	Use:               "goje",
-	Short:             "a pomodoro timer server",
-	Long:              "goje is a pomodoro timer server with modern features, suitable for both everyday users and computer nerds",
-	SilenceErrors:     true,
-	SilenceUsage:      true,
+	Use:           "goje",
+	Short:         "a pomodoro timer server",
+	Long:          "goje is a pomodoro timer server with modern features, suitable for both everyday users and computer nerds",
+	SilenceErrors: true,
+	SilenceUsage:  true,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := runDaemons(); err != nil {
 			return err
@@ -96,9 +97,9 @@ var rootCmd = &cobra.Command{
 		for {
 			<-sig
 			readConfig()
-      config.http_deamon.UpdateClients(SigEvent { 
-        name: "restart",
-      })
+			config.http_deamon.UpdateClients(SigEvent{
+				name: "restart",
+			})
 		}
 	},
 }
@@ -119,7 +120,7 @@ func readConfig() error {
 
 func runDaemons() (errout error) {
 	if config.ExecStart != "" {
-		config.Timer.OnModeStart = append(config.Timer.OnModeStart, func(t *timer.Timer) {
+		config.Timer.OnModeStart.Append(func(t *timer.Timer) {
 			content, _ := json.Marshal(t)
 			if err := exec.Command(config.ExecStart, string(content)).Run(); err != nil {
 				errout = err
@@ -127,13 +128,13 @@ func runDaemons() (errout error) {
 		})
 	}
 	if config.ExecEnd != "" {
-		config.Timer.OnModeEnd = append(config.Timer.OnModeEnd, func(t *timer.Timer) {
+		config.Timer.OnModeEnd.Append(func(t *timer.Timer) {
 			content, _ := json.Marshal(t)
 			exec.Command(config.ExecEnd, string(content)).Run()
 		})
 	}
 	if config.ExecPause != "" {
-		config.Timer.OnPause = append(config.Timer.OnPause, func(t *timer.Timer) {
+		config.Timer.OnPause.Append(func(t *timer.Timer) {
 			content, _ := json.Marshal(t)
 			exec.Command(config.ExecPause, string(content)).Run()
 		})
@@ -145,9 +146,9 @@ func runDaemons() (errout error) {
 				errout = os.WriteFile(config.WriteFile, append(content, '\n'), 0644)
 			}
 		}
-		config.Timer.OnChange = append(config.Timer.OnChange, writeChanges(timer.OnChangeEvent))
-		config.Timer.OnModeEnd = append(config.Timer.OnChange, writeChanges(timer.OnModeEndEvent))
-		config.Timer.OnModeStart = append(config.Timer.OnChange, writeChanges(timer.OnModeStartEvent))
+		config.Timer.OnChange.Append(writeChanges(timer.OnChangeEvent))
+		config.Timer.OnModeEnd.Append(writeChanges(timer.OnModeEndEvent))
+		config.Timer.OnModeStart.Append(writeChanges(timer.OnModeStartEvent))
 	}
 	if config.Activitywatch {
 		aw := activitywatch.Watcher{}
@@ -172,7 +173,7 @@ func runDaemons() (errout error) {
 			Timer:   &t,
 			Clients: &sync.Map{},
 		}
-		config.Timer.OnChange = append(config.Timer.OnChange, config.http_deamon.UpdateAllChangeEvent)
+		config.Timer.OnChange.Append(config.http_deamon.UpdateAllChangeEvent)
 		config.http_deamon.SetupEndStartEvents()
 		config.http_deamon.Init()
 		config.http_deamon.JsonRoutes()

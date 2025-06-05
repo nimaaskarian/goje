@@ -14,28 +14,6 @@ const (
 	MODE_MAX
 )
 
-type TimerConfig struct {
-	Sessions        uint
-	Duration        [MODE_MAX]time.Duration
-	OnModeEnd       []func(*Timer) `json:"-"`
-	OnModeStart     []func(*Timer) `json:"-"`
-	OnChange        []func(*Timer) `json:"-"`
-	OnPause         []func(*Timer) `json:"-"`
-	Paused          bool
-	DurationPerTick time.Duration `mapstructure:"duration-per-tick"`
-}
-
-var DefaultConfig = TimerConfig{
-	Sessions: 4,
-	Duration: [MODE_MAX]time.Duration{
-		25 * time.Minute,
-		5 * time.Minute,
-		30 * time.Minute,
-	},
-	DurationPerTick: time.Second,
-	Paused:          false,
-}
-
 type Timer struct {
 	Config           *TimerConfig
 	Duration         time.Duration
@@ -46,15 +24,7 @@ type Timer struct {
 
 func (t *Timer) Reset() {
 	t.SeekTo(t.Config.Duration[t.Mode])
-	t.onStart()
-}
-
-func (t *Timer) onStart() {
-	if t.Config.OnModeStart != nil {
-		for _, onStart := range t.Config.OnModeStart {
-			onStart(t)
-		}
-	}
+  t.Config.OnModeStart.Run(t)
 }
 
 func (t *Timer) SetConfig(config *TimerConfig) {
@@ -62,45 +32,30 @@ func (t *Timer) SetConfig(config *TimerConfig) {
 }
 
 func (t *Timer) Init() {
-  t.naiveInit()
-  t.Reset()
-}
-
-// naive init inits the timer to initial state without setting the current time
-// nor firing the start event
-func (t *Timer) naiveInit() {
 	t.Mode = Pomodoro
 	t.FinishedSessions = 0
 	t.Paused = t.Config.Paused
-  if t.Paused {
-    t.OnPause()
-  }
-}
-
-func (t *Timer) OnChange() {
-	if t.Config.OnChange != nil {
-		for _, onChange := range t.Config.OnChange {
-			onChange(t)
-		}
+	t.SeekTo(t.Config.Duration[t.Mode])
+	if t.Paused {
+    t.Config.OnPause.Run(t)
+		t.Config.OnPause.AppendOnce(func (t *Timer) {
+      if !t.Paused {
+        t.Config.OnModeStart.Run(t)
+      }
+    })
+	} else {
+    t.Config.OnModeStart.Run(t)
 	}
 }
 
 func (t *Timer) Pause() {
-  t.Paused = !t.Paused
-  t.OnPause()
-}
-
-func (t *Timer) OnPause() {
-	if t.Config.OnPause != nil {
-    for _, onPause := range t.Config.OnPause {
-      onPause(t)
-    }
-  }
+	t.Paused = !t.Paused
+	t.Config.OnPause.Run(t)
 }
 
 func (t *Timer) SeekTo(duration time.Duration) {
 	t.Duration = duration
-	t.OnChange()
+	t.Config.OnChange.Run(t)
 }
 
 func (t *Timer) SeekAdd(duration time.Duration) {
@@ -112,17 +67,9 @@ func (t *Timer) SeekAdd(duration time.Duration) {
 	}
 }
 
-func (t *Timer) onEnd() {
-	if t.Config.OnModeEnd != nil {
-		for _, onEnd := range t.Config.OnModeEnd {
-			onEnd(t)
-		}
-	}
-}
-
 func (t *Timer) tick() {
 	if t.Duration <= 0 {
-		t.onEnd()
+    t.Config.OnModeEnd.Run(t)
 		t.SwitchNextMode()
 	}
 	time.Sleep(t.Config.DurationPerTick)
@@ -130,7 +77,7 @@ func (t *Timer) tick() {
 		return
 	}
 	t.Duration -= t.Config.DurationPerTick
-	t.OnChange()
+	t.Config.OnChange.Run(t)
 }
 
 // Halts the current thread for ever. Use in a go routine.
@@ -150,7 +97,8 @@ func (t *Timer) SwitchNextMode() {
 			t.Mode = ShortBreak
 		}
 	case LongBreak:
-		t.naiveInit()
+		t.Init()
+		return
 	case ShortBreak:
 		t.Mode = Pomodoro
 	}

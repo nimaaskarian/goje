@@ -20,13 +20,13 @@ func (d *Daemon) UpdateAllChangeEvent(t *timer.Timer) {
 }
 
 func (d *Daemon) SetupEndStartEvents() {
-	d.Timer.Config.OnModeStart = append(d.Timer.Config.OnModeStart, func(t *timer.Timer) {
+	d.Timer.Config.OnModeStart.Append(func(t *timer.Timer) {
 		d.UpdateClients(timer.OnModeStartEvent(t))
 	})
-	d.Timer.Config.OnModeEnd = append(d.Timer.Config.OnModeEnd, func(t *timer.Timer) {
+	d.Timer.Config.OnModeEnd.Append(func(t *timer.Timer) {
 		d.UpdateClients(timer.OnChangeEvent(t))
 	})
-	d.Timer.Config.OnPause = append(d.Timer.Config.OnPause, func(t *timer.Timer) {
+	d.Timer.Config.OnPause.Append(func(t *timer.Timer) {
 		d.UpdateClients(timer.OnPauseEvent(t))
 	})
 }

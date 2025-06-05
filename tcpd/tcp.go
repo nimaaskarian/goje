@@ -95,7 +95,7 @@ func pauseCmd(timer *timer.Timer, args []string) (string, error) {
 		if err != nil {
 			return "", err
 		} else {
-      timer.OnPause()
+      timer.Config.OnPause.Run(timer)
 		}
 	default:
 		return "", TooManyArgsError{args[0]}
@@ -127,7 +127,7 @@ func sessionsCmd(timer *timer.Timer, args []string) (string, error) {
 		if err != nil {
 			return "", err
 		} else {
-			timer.OnChange()
+			timer.Config.OnChange.Run(timer)
 		}
 	default:
 		return "", WrongNumberOfArgsError{args[0]}
