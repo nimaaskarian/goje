@@ -1,13 +1,45 @@
+<div align="center">
+
 # goje
-goje (/ˈɡoʊ.dʒɛ/, meaning tomato in Persian) is an event-based pomodoro. it
-comes with:
+![GitHub top language](https://img.shields.io/github/languages/top/nimaaskarian/goje?color=blue)
 
-- [ActivityWatch watcher](#ActivityWatch-watcher)
-- [ActivityWatch integration](#ActivityWatch)
+goje (/ˈɡoʊ.dʒɛ/, meaning tomato in Persian) is an event-based pomodoro server.
 
+[Features](#features) •
+[Installation](#installation) •
+[Getting started](#getting-started) •
+[Usage](#usage)
+</div>
+
+## Features
+### Webgui
+webgui is intuitive and easy to use. the server listens to `localhost:7900` for
+it by default.
 
 ## ActivityWatch watcher
 You can turn on the activitywatch watcher using the config option `activitywatch` (`--activitywatch` cli argument) 
 
-![Goje webgui dark mode](https://github.com/user-attachments/assets/0fcecb01-ffae-4b94-bbd0-296baa23d666)
-![Goje webgui light mode](https://github.com/user-attachments/assets/476e8e57-36a1-40c5-9d91-deb1a0c8dedd)
+## Installation
+### from source
+clone the repository, and run `make` to install dependencies and compile, or
+`sudo make install` to compile and install. note that `go build` won't suffice.
+Use `make`.
+
+```
+git clone https://github.com/nimaaskarian/goje
+sudo make install
+```
+
+### binary
+to use prebuilt binaries, checkout [releases](https://github.com/nimaaskarian/goje/releases).
+
+## Getting started
+after [installation](#installation), you can run goje on command line using
+`goje`. or if you're on windows, you can download the [launcher batch
+script](https://github.com/nimaaskarian/goje/blob/master/goje-launcher.bat) to
+run goje with a single click.
+
+## Usage
+if the guides here wasn't enough, or the config options are still unclear,
+checkout [wiki](https://github.com/nimaaskarian/goje/wiki) for more indepth
+configuration options.

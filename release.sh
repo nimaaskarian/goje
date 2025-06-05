@@ -3,8 +3,8 @@ git tag "$1" || {
   last_tag=$(git tag | tail -n 2 | head -n 1)
   git checkout "$1"
 }
-make
 files=(goje_linux_amd64 goje_windows_amd64.exe goje_android_arm64)
+make coverage.out "${files[@]}"
 zip_files=()
 for file in "${files[@]}"; do
   if [[ $file = *.exe ]]; then
@@ -18,7 +18,7 @@ for file in "${files[@]}"; do
     mv "$file" $tmp
     bzip2 -c $tmp > "$out" || exit 1
   fi
-  rm $tmp
+  mv "$tmp" "$file"
   zip_files+=("$out")
 done
 gh release create "$1" "${zip_files[@]}"  --title "$1" --notes "**Full Changelog**: https://github.com/nimaaskarian/goje/compare/$last_tag...$1" --repo nimaaskarian/goje

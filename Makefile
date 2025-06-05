@@ -2,12 +2,11 @@ SRC = $(shell find -name "*.go" -type f)
 WEBGUI = httpd/webgui-preact/dist
 WEBGUI_DEPS = $(wildcard httpd/webgui-preact/src/* httpd/webgui-preact/public/* httpd/webgui-preact/index.html)
 TW = httpd/webgui-preact/node_modules/tailwindcss httpd/webgui-preact/node_modules/@tailwindcss/vite
-ALL = coverage.out goje_linux_amd64 goje_windows_amd64.exe goje_android_arm64
 ANDROID_NDK_HOME:=/opt/android-sdk/ndk/27.0.12077973
 
-all: ${ALL}
+all: coverage.out goje_linux_amd64
 
-coverage.out: $(SRC)
+coverage.out: $(WEBGUI) $(SRC)
 	go test ./... -coverprofile=coverage.out
 
 goje_linux_amd64: ${WEBGUI} $(SRC)
@@ -25,6 +24,10 @@ ${WEBGUI}: ${TW} $(WEBGUI_DEPS)
 
 ${TW}:
 	cd httpd/webgui-preact/; npm install tailwindcss @tailwindcss/vite
+
+install: all
+	mkdir -p ${DESTDIR}${PREFIX}/bin
+	cp -f dwm ${DESTDIR}${PREFIX}/bin
 
 clean:
 	rm ${ALL}
