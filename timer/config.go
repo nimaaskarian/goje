@@ -26,20 +26,19 @@ var DefaultConfig = TimerConfig{
 	Paused:          false,
 }
 
+// OnEventOnce functions run only on the next event (only once)
 type TimerConfigEvent struct {
 	OnEvent     []func(*Timer)
-  // list of functions to be run only on the next event (only once)
 	OnEventOnce []func(*Timer)
 }
 
 func (e *TimerConfigEvent) Append(handler func(*Timer)) {
-  e.OnEvent= append(e.OnEvent, handler)
+	e.OnEvent = append(e.OnEvent, handler)
 }
-
 
 // append function to be run only on the next event
 func (e *TimerConfigEvent) AppendOnce(handler func(*Timer)) {
-  e.OnEventOnce = append(e.OnEventOnce, handler)
+	e.OnEventOnce = append(e.OnEventOnce, handler)
 }
 
 func (e *TimerConfigEvent) Run(t *Timer) {
@@ -48,4 +47,3 @@ func (e *TimerConfigEvent) Run(t *Timer) {
 	}
 	e.OnEventOnce = nil
 }
-

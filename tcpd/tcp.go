@@ -16,16 +16,16 @@ import (
 )
 
 const (
-	Pause       = "pause"
-	Seek        = "seek"
-	Reset       = "reset"
-	Next        = "next"
-	Prev        = "prev"
-	Skip        = "skip"
-	Init        = "init"
-  Sessions    = "sessions"
-	Timer       = "timer"
-	Commands    = "commands"
+	Pause    = "pause"
+	Seek     = "seek"
+	Reset    = "reset"
+	Next     = "next"
+	Prev     = "prev"
+	Skip     = "skip"
+	Init     = "init"
+	Sessions = "sessions"
+	Timer    = "timer"
+	Commands = "commands"
 )
 
 type TooManyArgsError struct {
@@ -64,7 +64,7 @@ func ParseInput(timer *timer.Timer, input string) (string, string, error) {
 		out, err = prevModeCmd(timer, splited)
 	case Skip, Next:
 		out, err = nextModeCmd(timer, splited)
-  case Sessions:
+	case Sessions:
 		out, err = sessionsCmd(timer, splited)
 	case Commands:
 		out, err = fmt.Sprintf(`command: %s
@@ -88,14 +88,14 @@ command: %s
 func pauseCmd(timer *timer.Timer, args []string) (string, error) {
 	switch len(args) {
 	case 1:
-    timer.Pause()
+		timer.Pause()
 	case 2:
 		var err error
 		timer.Paused, err = parseBool(args[1])
 		if err != nil {
 			return "", err
 		} else {
-      timer.Config.OnPause.Run(timer)
+			timer.Config.OnPause.Run(timer)
 		}
 	default:
 		return "", TooManyArgsError{args[0]}
@@ -108,22 +108,22 @@ func sessionsCmd(timer *timer.Timer, args []string) (string, error) {
 	case 2:
 		var err error
 		if strings.HasPrefix(args[1], "+") || strings.HasPrefix(args[1], "-") {
-      var count uint64
-      count, err = strconv.ParseUint(args[1][1:], 10, 32)
-      if err == nil {
-        if args[1][0] == '+' {
-          timer.FinishedSessions += uint(count)
-        } else {
-          timer.FinishedSessions -= uint(count)
-        }
-      }
-    } else {
-      var count uint64
-      count, err = strconv.ParseUint(args[1], 10, 32)
-      if err == nil {
-        timer.FinishedSessions = uint(count)
-      }
-    }
+			var count uint64
+			count, err = strconv.ParseUint(args[1][1:], 10, 32)
+			if err == nil {
+				if args[1][0] == '+' {
+					timer.FinishedSessions += uint(count)
+				} else {
+					timer.FinishedSessions -= uint(count)
+				}
+			}
+		} else {
+			var count uint64
+			count, err = strconv.ParseUint(args[1], 10, 32)
+			if err == nil {
+				timer.FinishedSessions = uint(count)
+			}
+		}
 		if err != nil {
 			return "", err
 		} else {
@@ -256,24 +256,24 @@ func (d *Daemon) Run() {
 			continue
 		}
 		conn.Write([]byte("OK goje 0.0.1\n"))
-    go func() {
-      for {
-        defer conn.Close()
-        n, err := conn.Read(buff)
-        if err == io.EOF {
-          break
-        } else if err != nil {
-          slog.Warn("read throw error", "err", err)
-          continue
-        }
-        cmd, out, err := ParseInput(d.Timer, string(bytes.TrimSpace(buff[:n])))
-        if err != nil {
-          slog.Error("command throw error", "err", err)
-          conn.Write(fmt.Appendf(nil, "ACK {%s} %s\n", cmd, err))
-        } else {
-          conn.Write(append([]byte(out), []byte("OK\n")...))
-        }
-      }
-    }()
+		go func() {
+			for {
+				defer conn.Close()
+				n, err := conn.Read(buff)
+				if err == io.EOF {
+					break
+				} else if err != nil {
+					slog.Warn("read throw error", "err", err)
+					continue
+				}
+				cmd, out, err := ParseInput(d.Timer, string(bytes.TrimSpace(buff[:n])))
+				if err != nil {
+					slog.Error("command throw error", "err", err)
+					conn.Write(fmt.Appendf(nil, "ACK {%s} %s\n", cmd, err))
+				} else {
+					conn.Write(append([]byte(out), []byte("OK\n")...))
+				}
+			}
+		}()
 	}
 }

@@ -17,7 +17,7 @@ func TestWatcherDuration(t *testing.T) {
 		time.Second,
 		time.Second * 3,
 	}
-  tomato.Config.Sessions = 2
+	tomato.Config.Sessions = 2
 	client := aw_go.ActivityWatchClient{
 		Config: aw_go.ActivityWatchClientConfig{
 			Protocol: "http",
@@ -39,10 +39,10 @@ func TestWatcherDuration(t *testing.T) {
 		if err := c.BindJSON(&event); err != nil {
 			t.Fatal(err)
 		}
-    mode := tomato.Mode
-    if time.Duration(event.Duration) != tomato.Config.Duration[mode] {
+		mode := tomato.Mode
+		if time.Duration(event.Duration) != tomato.Config.Duration[mode] {
 			t.Fatal("duration mismatch", time.Duration(event.Duration), tomato.Config.Duration[mode], mode)
-    }
+		}
 	})
 	go router.Run(client.Config.Hostname + ":" + client.Config.Port)
 	tomato.Init()

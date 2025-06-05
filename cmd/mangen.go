@@ -9,23 +9,23 @@ import (
 )
 
 func init() {
-  rootCmd.AddCommand(mangenCmd)
+	rootCmd.AddCommand(mangenCmd)
 }
 
 var mangenCmd = &cobra.Command{
 	Use:   "mangen [dir]",
 	Short: "generates a man (1) page for goje. in the given directory",
-	Long: "generates a man (1) page for goje. in the given directory. defaults to current directory",
-  Args: cobra.MaximumNArgs(1),
-  RunE: func(cmd *cobra.Command, args []string) error {
-    var dir string
-    if len(args) == 1 {
-      dir = args[0]
-    } else {
-      dir = "."
-    }
-    return writeManpages(rootCmd, dir)
-  },
+	Long:  "generates a man (1) page for goje. in the given directory. defaults to current directory",
+	Args:  cobra.MaximumNArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		var dir string
+		if len(args) == 1 {
+			dir = args[0]
+		} else {
+			dir = "."
+		}
+		return writeManpages(rootCmd, dir)
+	},
 }
 
 func writeManpages(root *cobra.Command, dir string) error {

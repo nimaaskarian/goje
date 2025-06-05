@@ -72,7 +72,7 @@ func (d *Daemon) WebguiRoutes(custom_css_file string) {
 	static, _ := fs.Sub(embed_fs, "webgui-preact/dist/assets")
 	d.router.StaticFS("/assets", http.FS(static))
 	if custom_css_file != "" {
-    d.router.StaticFile("/custom.css", custom_css_file)
+		d.router.StaticFile("/custom.css", custom_css_file)
 	}
 	data, _ := embed_fs.ReadFile("webgui-preact/dist/index.html")
 	d.router.GET("/", func(c *gin.Context) {

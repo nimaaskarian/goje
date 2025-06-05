@@ -14,5 +14,5 @@ func OpenURL(url string) error {
 }
 
 func ConfigDir() string {
-  return filepath.Join(os.Getenv("APPDATA"), "goje")
+	return filepath.Join(os.Getenv("APPDATA"), "goje")
 }
