@@ -3,18 +3,21 @@
 # goje
 ![GitHub top language](https://img.shields.io/github/languages/top/nimaaskarian/goje?color=blue)
 
-goje (/ˈɡoʊ.dʒɛ/, meaning tomato in Persian) is an event-based pomodoro server.
+goje (/ˈɡoʊ.dʒɛ/, meaning tomato in Persian) is an event-based pomodoro server;
+a dream pomodoro app that uses low resources (23MB of RAM with all the features
+enabled) and just dissolves into your setup, whatever that might be!
 
 [Features](#features) •
 [Installation](#installation) •
 [Getting started](#getting-started) •
-[Usage](#usage)
+[Integration and customization](#integration-and-customization)
 </div>
 
-## Disclaimer
-goje is highly in development. i'll try my best not to change the current API, but it will inevitably change.
-
 ## Features
+
+### ActivityWatch
+You can turn on the activitywatch watcher using the config option `activitywatch` (`--activitywatch` cli argument) 
+![activitywatch bucket](https://github.com/user-attachments/assets/3bd1ffc6-1cc7-4a6a-a110-728ee1823507)
 
 ### Webgui
 webgui is intuitive and easy to use. its run by default, and opens in your browser. it supports both light and dark mode, and uses your default browser theme.
@@ -22,20 +25,16 @@ webgui is intuitive and easy to use. its run by default, and opens in your brows
 
 
 #### Custom css
-if you don't like the default style of goje, you can use `--custom-css` option and pass a custom css file to it.
-here's a [pywal-themed](https://github.com/nimaaskarian/goje/wiki/Pywal-integration) goje using this feature:
+if you don't like the default style of goje webgui, you can use `--custom-css`
+option and pass a custom css file to it. here's a
+[pywal-themed](https://github.com/nimaaskarian/goje/wiki/Pywal-integration) goje
+using this feature:
 
 ![pywal-themed goje using custom css](https://github.com/user-attachments/assets/d00fa5cd-ab5d-442f-a195-1b233283b896)
 
-
-
-## ActivityWatch
-You can turn on the activitywatch watcher using the config option `activitywatch` (`--activitywatch` cli argument) 
-![activitywatch bucket](https://github.com/user-attachments/assets/3bd1ffc6-1cc7-4a6a-a110-728ee1823507)
-
 ## Installation
 
-### From source
+### Source
 clone the repository, and run `make` to install dependencies and compile, or
 `sudo make install` to compile and install. note that `go build` won't suffice.
 Use `make`.
@@ -45,17 +44,33 @@ git clone https://github.com/nimaaskarian/goje
 sudo make install
 ```
 
-### Prebuilt binary
-to use prebuilt binaries, checkout [releases](https://github.com/nimaaskarian/goje/releases).
+### Binary
+to use prebuilt binaries, checkout
+[releases](https://github.com/nimaaskarian/goje/releases). Windows binary is
+shipped with a `goje-launcher.bat` that allows you to run goje with a single
+click (if the Windows security thing doesn't scream at you, because the app is
+not signed by a developer key).
+
+#### *nix
+the *nix versions are bzipped; after downloading, use `bunzip2` to unzip
+them:
+
+```bash
+# on linux
+bunzip2 goje_linux_amd64.bz2
+chmod +x goje_linux_amd64
+# on termux
+bunzip2 goje_android_arm64.bz2
+chmod +x goje_android_arm64
+```
 
 ## Getting started
 after [installation](#installation), you can run goje on command line using
-`goje`. or if you're on windows, you can download the [launcher batch
+`goje`; or if you're on Windows, you can download the [launcher batch
 script](https://github.com/nimaaskarian/goje/blob/master/goje-launcher.bat) to
-run goje with a single click. this already comes with the [prebuilt binary
-version](#prebuilt-binary)
+run goje with a single click. this launcher already comes with the Windows
+version in [releases](https://github.com/nimaaskarian/goje/releases).
 
-## Usage
-if the guides here wasn't enough, or the config options are still unclear,
+## Integration and customization
 checkout [wiki](https://github.com/nimaaskarian/goje/wiki) for more indepth
 configuration options.
