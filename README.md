@@ -22,7 +22,7 @@ webgui is intuitive and easy to use. its run by default, and opens in your brows
 
 
 #### Custom css
-if you don't like the default style of goje, you can use ``--custom-css` option and pass a custom css file to it.
+if you don't like the default style of goje, you can use `--custom-css` option and pass a custom css file to it.
 here's a [pywal-themed](https://github.com/nimaaskarian/goje/wiki/Pywal-integration) goje using this feature:
 
 ![pywal-themed goje using custom css](https://github.com/user-attachments/assets/d00fa5cd-ab5d-442f-a195-1b233283b896)
