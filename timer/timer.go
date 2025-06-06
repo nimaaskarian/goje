@@ -37,7 +37,6 @@ func (t *Timer) Init() {
 	t.Paused = t.Config.Paused
 	t.SeekTo(t.Config.Duration[t.Mode])
 	if t.Paused {
-		t.Config.OnPause.Run(t)
 		t.Config.OnPause.AppendOnce(func(t *Timer) {
 			if !t.Paused {
 				t.Config.OnModeStart.Run(t)
@@ -77,7 +76,7 @@ func (t *Timer) tick() {
 		return
 	}
 	t.Duration -= t.Config.DurationPerTick
-	t.Config.OnChange.Run(t)
+	go t.Config.OnChange.Run(t)
 }
 
 // Halts the current thread for ever. Use in a go routine.

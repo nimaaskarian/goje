@@ -53,22 +53,20 @@ func init() {
 			"duration of "+lower+" sections of the timer",
 		)
 	}
-	viper.SetDefault("tcp-address", "localhost:7800")
-	viper.SetDefault("http-address", "localhost:7900")
-	viper.SetDefault("buff-size", 1024)
-	rootCmd.PersistentFlags().StringVar(&config.CustomCss, "custom-css", "", "a custom css file to load on the website")
-	rootCmd.PersistentFlags().StringVar(&config.ExecEnd, "exec-start", "", "command to run when any timer mode starts (run's the script with json of timer as the first arguemnt)")
-	rootCmd.PersistentFlags().StringVar(&config.ExecStart, "exec-end", "", "command to run when any timer mode ends (run's the script with json of timer as the first arguemnt)")
-	rootCmd.PersistentFlags().StringVar(&config.ExecPause, "exec-pause", "", "command to run when timer (un)pauses")
-	rootCmd.PersistentFlags().StringVarP(&config.TcpAddress, "tcp-address", "a", "", "address:[port] for tcp pomodoro daemon (doesn't run when empty)")
-	rootCmd.PersistentFlags().StringVarP(&config.HttpAddress, "http-address", "A", "", "address:[port] for http pomodoro api (doesn't run when empty)")
-	rootCmd.PersistentFlags().BoolVar(&config.NoWebgui, "no-webgui", false, "don't run webgui. webgui can't be run without the json server")
-	rootCmd.PersistentFlags().UintVar(&config.BuffSize, "buff-size", 0, "size of buffer that tcp messages are parsed with")
-	rootCmd.PersistentFlags().BoolVar(&config.NoOpenBrowser, "no-open-browser", false, "don't open the browser when running webgui")
-	rootCmd.PersistentFlags().BoolVarP(&config.Activitywatch, "activitywatch", "", false, "daemon send's pomodoro data to activitywatch if is present")
-	rootCmd.PersistentFlags().StringVarP(&config.WriteFile, "write-file", "w", "", "write timer events in a file at given path")
-	viper.BindPFlags(rootCmd.PersistentFlags())
+	rootCmd.Flags().String("custom-css", "", "a custom css file to load on the website")
+	rootCmd.Flags().String("exec-start", "", "command to run when any timer mode starts (run's the script with json of timer as the first arguemnt)")
+	rootCmd.Flags().String("exec-end", "", "command to run when any timer mode ends (run's the script with json of timer as the first arguemnt)")
+	rootCmd.Flags().String("exec-pause", "", "command to run when timer (un)pauses")
+	rootCmd.Flags().StringP("tcp-address", "a", "localhost:7800", "address:[port] for tcp pomodoro daemon (doesn't run when empty)")
+	rootCmd.Flags().StringP("http-address", "A", "localhost:7900", "address:[port] for http pomodoro api (doesn't run when empty)")
+	rootCmd.Flags().Bool("no-webgui", false, "don't run webgui. webgui can't be run without the json server")
+	rootCmd.Flags().Uint("buff-size", 1024, "size of buffer that tcp messages are parsed with")
+	rootCmd.Flags().Bool("no-open-browser", false, "don't open the browser when running webgui")
+	rootCmd.Flags().BoolP("activitywatch", "", false, "daemon send's pomodoro data to activitywatch if is present")
+	rootCmd.Flags().StringP("write-file", "w", "", "write timer events in a file at given path")
 	readConfig()
+	viper.BindPFlags(rootCmd.Flags())
+	viper.Unmarshal(&config)
 }
 
 type SigEvent struct {
@@ -92,15 +90,7 @@ var rootCmd = &cobra.Command{
 		if err := runDaemons(); err != nil {
 			return err
 		}
-		sig := make(chan os.Signal, 1)
-		signal.Notify(sig, syscall.SIGHUP)
-		for {
-			<-sig
-			readConfig()
-			config.http_deamon.UpdateClients(SigEvent{
-				name: "restart",
-			})
-		}
+    return nil
 	},
 }
 
@@ -115,7 +105,7 @@ func readConfig() error {
 	if err := viper.ReadInConfig(); err != nil && !errors.Is(err, viper.ConfigFileNotFoundError{}) {
 		return err
 	}
-	return viper.Unmarshal(&config)
+  return nil
 }
 
 func runDaemons() (errout error) {
@@ -209,4 +199,15 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+  sig := make(chan os.Signal, 1)
+  signal.Notify(sig, syscall.SIGHUP)
+  for {
+    <-sig
+    readConfig()
+    viper.BindPFlags(rootCmd.Flags())
+    viper.Unmarshal(&config)
+    config.http_deamon.UpdateClients(SigEvent{
+      name: "restart",
+    })
+  }
 }
