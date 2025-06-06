@@ -27,10 +27,6 @@ func (t *Timer) Reset() {
 	t.Config.OnModeStart.Run(t)
 }
 
-func (t *Timer) SetConfig(config *TimerConfig) {
-	t.Config = config
-}
-
 func (t *Timer) Init() {
 	t.Mode = Pomodoro
 	t.FinishedSessions = 0

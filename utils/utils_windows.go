@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 )
 
+const DEFAULT_EDITORS = "notepad"
+
 func OpenURL(url string) error {
 	return exec.Command("cmd.exe", "/C", "start "+url).Run()
 }

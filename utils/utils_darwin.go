@@ -5,6 +5,8 @@ package utils
 
 import "os/exec"
 
+const DEFAULT_EDITORS = "vim"
+
 func OpenURL(url string) error {
 	return exec.Command("open", url).Run()
 }

@@ -1,10 +1,9 @@
 package tcpd
 
 import (
-	"bytes"
+	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net"
 	"reflect"
@@ -235,7 +234,6 @@ func parseBool(input string) (bool, error) {
 type Daemon struct {
 	Timer    *timer.Timer
 	Listener net.Listener
-	Buffsize uint
 }
 
 func (d *Daemon) InitializeListener(address string) error {
@@ -247,33 +245,31 @@ func (d *Daemon) InitializeListener(address string) error {
 	return nil
 }
 
+func (d *Daemon) handleConnection(conn net.Conn) {
+	conn.Write([]byte("OK goje 0.0.1\n"))
+	for {
+		buff, err := bufio.NewReader(conn).ReadString('\n')
+		if err != nil {
+			break
+		}
+		cmd, out, err := ParseInput(d.Timer, strings.TrimSpace(buff))
+		if err != nil {
+			slog.Error("command throw error", "err", err)
+			conn.Write(fmt.Appendf(nil, "ACK {%s} %s\n", cmd, err))
+		} else {
+			conn.Write(append([]byte(out), []byte("OK\n")...))
+		}
+	}
+	defer conn.Close()
+}
+
 func (d *Daemon) Run() {
-	buff := make([]byte, d.Buffsize)
 	for {
 		conn, err := d.Listener.Accept()
 		if err != nil {
 			slog.Warn("connection throw error", "err", err)
-			continue
+			return
 		}
-		conn.Write([]byte("OK goje 0.0.1\n"))
-		go func() {
-			for {
-				defer conn.Close()
-				n, err := conn.Read(buff)
-				if err == io.EOF {
-					break
-				} else if err != nil {
-					slog.Warn("read throw error", "err", err)
-					continue
-				}
-				cmd, out, err := ParseInput(d.Timer, string(bytes.TrimSpace(buff[:n])))
-				if err != nil {
-					slog.Error("command throw error", "err", err)
-					conn.Write(fmt.Appendf(nil, "ACK {%s} %s\n", cmd, err))
-				} else {
-					conn.Write(append([]byte(out), []byte("OK\n")...))
-				}
-			}
-		}()
+		go d.handleConnection(conn)
 	}
 }

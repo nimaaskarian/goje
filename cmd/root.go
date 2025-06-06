@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/nimaaskarian/goje/activitywatch"
 	"github.com/nimaaskarian/goje/httpd"
@@ -34,7 +35,7 @@ func init() {
 	for mode := range timer.MODE_MAX {
 		lower := strings.ToLower(mode.String())
 		worm_case := strings.ReplaceAll(lower, " ", "-")
-		rootCmd.PersistentFlags().DurationVarP(
+		rootCmd.Flags().DurationVarP(
 			&config.Timer.Duration[mode],
 			worm_case+"-duration",
 			worm_case[0:1],
@@ -49,7 +50,6 @@ func init() {
 	rootCmd.Flags().StringP("tcp-address", "a", "localhost:7800", "address:[port] for tcp pomodoro daemon (doesn't run when empty)")
 	rootCmd.Flags().StringP("http-address", "A", "localhost:7900", "address:[port] for http pomodoro api (doesn't run when empty)")
 	rootCmd.Flags().Bool("no-webgui", false, "don't run webgui. webgui can't be run without the json server")
-	rootCmd.Flags().Uint("buff-size", 1024, "size of buffer that tcp messages are parsed with")
 	rootCmd.Flags().Bool("no-open-browser", false, "don't open the browser when running webgui")
 	rootCmd.Flags().BoolP("activitywatch", "", false, "daemon send's pomodoro data to activitywatch if is present")
 	rootCmd.Flags().StringP("write-file", "w", "", "write timer events in a file at given path")
@@ -78,7 +78,14 @@ var rootCmd = &cobra.Command{
 		if err := runDaemons(); err != nil {
 			return err
 		}
-		return nil
+    sig := make(chan os.Signal, 1)
+    signal.Notify(sig, syscall.SIGHUP)
+    for {
+      <-sig
+      config.http_deamon.UpdateClients(SigEvent{
+        name: "restart",
+      })
+    }
 	},
 }
 
@@ -134,12 +141,16 @@ func runDaemons() (errout error) {
 		aw.AddEventWatchers(&config.Timer)
 	}
 	t := timer.Timer{}
-	t.SetConfig(&config.Timer)
+  config.Timer.Duration = [...]time.Duration{
+    viper.GetDuration("pomodoro-duration"),
+    viper.GetDuration("short-break-duration"),
+    viper.GetDuration("long-break-duration"),
+  }
+	t.Config = &config.Timer
 
 	if address := viper.GetString("tcp-address"); address != "" {
 		tcp_daemon := tcpd.Daemon{
 			Timer:    &t,
-			Buffsize: viper.GetUint("buffsize"),
 		}
 		if err := tcp_daemon.InitializeListener(address); err != nil {
 			return err
@@ -186,15 +197,5 @@ func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
-	}
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGHUP)
-	for {
-		<-sig
-		readConfig()
-		viper.BindPFlags(rootCmd.Flags())
-		config.http_deamon.UpdateClients(SigEvent{
-			name: "restart",
-		})
 	}
 }
