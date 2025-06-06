@@ -23,19 +23,8 @@ import (
 var config_file string
 
 type AppConfig struct {
-	TcpAddress    string `mapstructure:"tcp-address"`
-	HttpAddress   string `mapstructure:"http-address"`
-	BuffSize      uint   `mapstructure:"buff-size"`
-	NoWebgui      bool   `mapstructure:"no-webgui"`
-	NoOpenBrowser bool   `mapstructure:"no-open-browser"`
-	WriteFile     string `mapstructure:"write-path"`
-	Activitywatch bool
-	ExecEnd       string `mapstructure:"exec-end"`
-	ExecStart     string `mapstructure:"exec-start"`
-	ExecPause     string `mapstructure:"exec-pause"`
-	CustomCss     string `mapstructure:"custom-css"`
-	Timer         timer.TimerConfig
-	http_deamon   *httpd.Daemon
+	Timer       timer.TimerConfig
+	http_deamon *httpd.Daemon
 }
 
 var config = AppConfig{Timer: timer.DefaultConfig}
@@ -66,7 +55,6 @@ func init() {
 	rootCmd.Flags().StringP("write-file", "w", "", "write timer events in a file at given path")
 	readConfig()
 	viper.BindPFlags(rootCmd.Flags())
-	viper.Unmarshal(&config)
 }
 
 type SigEvent struct {
@@ -90,7 +78,7 @@ var rootCmd = &cobra.Command{
 		if err := runDaemons(); err != nil {
 			return err
 		}
-    return nil
+		return nil
 	},
 }
 
@@ -105,42 +93,42 @@ func readConfig() error {
 	if err := viper.ReadInConfig(); err != nil && !errors.Is(err, viper.ConfigFileNotFoundError{}) {
 		return err
 	}
-  return nil
+	return nil
 }
 
 func runDaemons() (errout error) {
-	if config.ExecStart != "" {
+	if path := viper.GetString("exec-start"); path != "" {
 		config.Timer.OnModeStart.Append(func(t *timer.Timer) {
 			content, _ := json.Marshal(t)
-			if err := exec.Command(config.ExecStart, string(content)).Run(); err != nil {
+			if err := exec.Command(path, string(content)).Run(); err != nil {
 				errout = err
 			}
 		})
 	}
-	if config.ExecEnd != "" {
+	if path := viper.GetString("exec-end"); path != "" {
 		config.Timer.OnModeEnd.Append(func(t *timer.Timer) {
 			content, _ := json.Marshal(t)
-			exec.Command(config.ExecEnd, string(content)).Run()
+			exec.Command(path, string(content)).Run()
 		})
 	}
-	if config.ExecPause != "" {
+	if path := viper.GetString("exec-pause"); path != "" {
 		config.Timer.OnPause.Append(func(t *timer.Timer) {
 			content, _ := json.Marshal(t)
-			exec.Command(config.ExecPause, string(content)).Run()
+			exec.Command(path, string(content)).Run()
 		})
 	}
-	if config.WriteFile != "" {
+	if path := viper.GetString("exec-pause"); path != "" {
 		writeChanges := func(event_callback func(payload any) timer.Event) func(t *timer.Timer) {
 			return func(t *timer.Timer) {
 				content, _ := json.Marshal(event_callback(t))
-				errout = os.WriteFile(config.WriteFile, append(content, '\n'), 0644)
+				errout = os.WriteFile(path, append(content, '\n'), 0644)
 			}
 		}
 		config.Timer.OnChange.Append(writeChanges(timer.OnChangeEvent))
 		config.Timer.OnModeEnd.Append(writeChanges(timer.OnModeEndEvent))
 		config.Timer.OnModeStart.Append(writeChanges(timer.OnModeStartEvent))
 	}
-	if config.Activitywatch {
+	if viper.GetBool("activitywatch") {
 		aw := activitywatch.Watcher{}
 		aw.Init()
 		aw.AddEventWatchers(&config.Timer)
@@ -148,17 +136,17 @@ func runDaemons() (errout error) {
 	t := timer.Timer{}
 	t.SetConfig(&config.Timer)
 
-	if config.TcpAddress != "" {
+	if address := viper.GetString("tcp-address"); address != "" {
 		tcp_daemon := tcpd.Daemon{
 			Timer:    &t,
-			Buffsize: config.BuffSize,
+			Buffsize: viper.GetUint("buffsize"),
 		}
-		if err := tcp_daemon.InitializeListener(config.TcpAddress); err != nil {
+		if err := tcp_daemon.InitializeListener(address); err != nil {
 			return err
 		}
 		go tcp_daemon.Run()
 	}
-	if config.HttpAddress != "" {
+	if address := viper.GetString("http-address"); address != "" {
 		config.http_deamon = &httpd.Daemon{
 			Timer:   &t,
 			Clients: &sync.Map{},
@@ -167,11 +155,11 @@ func runDaemons() (errout error) {
 		config.http_deamon.SetupEndStartEvents()
 		config.http_deamon.Init()
 		config.http_deamon.JsonRoutes()
-		if !config.NoWebgui {
-			go runWebgui()
+		if !viper.GetBool("no-webgui") {
+			go runWebgui(address)
 		}
 		go func() {
-			errout = config.http_deamon.Run(config.HttpAddress)
+			errout = config.http_deamon.Run(address)
 		}()
 	}
 	t.Init()
@@ -179,16 +167,16 @@ func runDaemons() (errout error) {
 	return nil
 }
 
-func runWebgui() {
-	config.http_deamon.WebguiRoutes(config.CustomCss)
-	if !config.NoOpenBrowser {
-		if strings.HasPrefix(config.HttpAddress, "http://") {
-			utils.OpenURL(config.HttpAddress)
+func runWebgui(address string) {
+	config.http_deamon.WebguiRoutes(viper.GetString("custom-css"))
+	if !viper.GetBool("no-open-browser") {
+		if strings.HasPrefix(address, "http://") {
+			utils.OpenURL(address)
 		} else {
-			if config.HttpAddress[0] == ':' {
-				utils.OpenURL("http://localhost" + config.HttpAddress)
+			if address[0] == ':' {
+				utils.OpenURL("http://localhost" + address)
 			} else {
-				utils.OpenURL("http://" + config.HttpAddress)
+				utils.OpenURL("http://" + address)
 			}
 		}
 	}
@@ -199,15 +187,14 @@ func Execute() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-  sig := make(chan os.Signal, 1)
-  signal.Notify(sig, syscall.SIGHUP)
-  for {
-    <-sig
-    readConfig()
-    viper.BindPFlags(rootCmd.Flags())
-    viper.Unmarshal(&config)
-    config.http_deamon.UpdateClients(SigEvent{
-      name: "restart",
-    })
-  }
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGHUP)
+	for {
+		<-sig
+		readConfig()
+		viper.BindPFlags(rootCmd.Flags())
+		config.http_deamon.UpdateClients(SigEvent{
+			name: "restart",
+		})
+	}
 }
