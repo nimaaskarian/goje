@@ -146,6 +146,8 @@ func runDaemons() (errout error) {
     viper.GetDuration("short-break-duration"),
     viper.GetDuration("long-break-duration"),
   }
+  config.Timer.Paused = viper.GetBool("paused");
+
 	t.Config = &config.Timer
 
 	if address := viper.GetString("tcp-address"); address != "" {
