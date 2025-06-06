@@ -18,10 +18,6 @@ goje is a pomodoro timer server with modern features, suitable for both everyday
 	daemon send's pomodoro data to activitywatch if is present
 
 .PP
-\fB--buff-size\fP=0
-	size of buffer that tcp messages are parsed with
-
-.PP
 \fB-c\fP, \fB--config\fP=""
 	path to config file. uses default if not specified
 
@@ -46,7 +42,7 @@ goje is a pomodoro timer server with modern features, suitable for both everyday
 	help for goje
 
 .PP
-\fB-A\fP, \fB--http-address\fP=""
+\fB-A\fP, \fB--http-address\fP="localhost:7900"
 	address:[port] for http pomodoro api (doesn't run when empty)
 
 .PP
@@ -70,7 +66,7 @@ goje is a pomodoro timer server with modern features, suitable for both everyday
 	duration of short break sections of the timer
 
 .PP
-\fB-a\fP, \fB--tcp-address\fP=""
+\fB-a\fP, \fB--tcp-address\fP="localhost:7800"
 	address:[port] for tcp pomodoro daemon (doesn't run when empty)
 
 .PP
@@ -79,7 +75,7 @@ goje is a pomodoro timer server with modern features, suitable for both everyday
 
 
 .SH SEE ALSO
-\fBgoje-completion(1)\fP, \fBgoje-mangen(1)\fP
+\fBgoje-completion(1)\fP, \fBgoje-config(1)\fP, \fBgoje-mangen(1)\fP
 
 
 .SH HISTORY

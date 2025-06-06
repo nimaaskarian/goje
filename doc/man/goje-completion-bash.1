@@ -50,64 +50,8 @@ You will need to start a new shell for this setup to take effect.
 
 
 .SH OPTIONS INHERITED FROM PARENT COMMANDS
-\fB--activitywatch\fP[=false]
-	daemon send's pomodoro data to activitywatch if is present
-
-.PP
-\fB--buff-size\fP=0
-	size of buffer that tcp messages are parsed with
-
-.PP
 \fB-c\fP, \fB--config\fP=""
 	path to config file. uses default if not specified
-
-.PP
-\fB--custom-css\fP=""
-	a custom css file to load on the website
-
-.PP
-\fB--exec-end\fP=""
-	command to run when any timer mode ends (run's the script with json of timer as the first arguemnt)
-
-.PP
-\fB--exec-pause\fP=""
-	command to run when timer (un)pauses
-
-.PP
-\fB--exec-start\fP=""
-	command to run when any timer mode starts (run's the script with json of timer as the first arguemnt)
-
-.PP
-\fB-A\fP, \fB--http-address\fP=""
-	address:[port] for http pomodoro api (doesn't run when empty)
-
-.PP
-\fB-l\fP, \fB--long-break-duration\fP=30m0s
-	duration of long break sections of the timer
-
-.PP
-\fB--no-open-browser\fP[=false]
-	don't open the browser when running webgui
-
-.PP
-\fB--no-webgui\fP[=false]
-	don't run webgui. webgui can't be run without the json server
-
-.PP
-\fB-p\fP, \fB--pomodoro-duration\fP=25m0s
-	duration of pomodoro sections of the timer
-
-.PP
-\fB-s\fP, \fB--short-break-duration\fP=5m0s
-	duration of short break sections of the timer
-
-.PP
-\fB-a\fP, \fB--tcp-address\fP=""
-	address:[port] for tcp pomodoro daemon (doesn't run when empty)
-
-.PP
-\fB-w\fP, \fB--write-file\fP=""
-	write timer events in a file at given path
 
 
 .SH SEE ALSO
