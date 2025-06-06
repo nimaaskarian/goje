@@ -1,5 +1,5 @@
 import { render } from 'preact';
-import { useMemo, useState } from 'preact/hooks';
+import { useEffect, useMemo, useState } from 'preact/hooks';
 import { Settings } from "./settings"
 import { Button } from "./utils"
 import { postTimer, timerModeString } from "./timer"
@@ -14,7 +14,9 @@ export function App() {
   /** @type {[Timer, (timer: Timer) => void]} */
   const [timer, setTimer] = useState(undefined)
   const [settings, setSettings] = useState(false)
+  const [notification, setNotification] = useState(false);
   const sse = useMemo(() => {
+    setNotification(localStorage.getItem('notification') === "true");
     const sse = new EventSource("/api/timer/stream")
     sse.addEventListener("change", (e) => {
       setTimer(JSON.parse(e.data))
@@ -33,10 +35,32 @@ export function App() {
     })
     return sse;
   }, [])
+  useEffect(()=>{
+    if (!sse) {
+      return
+    }
+    const notificationHandler = (e)=> {
+      const timer = JSON.parse(e.data)
+      const n = new Notification("Goje", { body: `${timerModeString(timer.Mode)} has ${e.type}ed` });
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") {
+          n.close();
+        }
+      });
+    }
+    localStorage.setItem('notification', String(notification));
+    if (notification) {
+      sse.addEventListener("start", notificationHandler),
+      sse.addEventListener("end", notificationHandler);
+      return () => {
+        ["start", "end"].forEach((item)=>sse.removeEventListener(item, notificationHandler))
+      }
+    }
+  }, [sse, notification])
   if (timer) {
     return (
       <div class={"h-full flex flex-col justify-center items-center bg-zinc-200 text-zinc-900 dark:text-white dark:bg-zinc-900" + (settings ? " overflow-hidden" : "")}>
-        <Settings onClose={() => setSettings(false)} timer={timer} hidden={!settings} sse={sse} />
+        <Settings onClose={() => setSettings(false)} timer={timer} hidden={!settings} notification={notification} setNotification={setNotification} />
         <button title="open settings" aria-label="open settings" onClick={() => setSettings(true)} class="absolute top-4 right-4 p-2 rounded dark:bg-zinc-800 bg-white shadow-sm hover:shadow-md transition ease-in-out duration-150 hover:text-zinc-600 hover:dark:text-zinc-300 cursor-pointer z-0">
           {cog_icon}
         </button>

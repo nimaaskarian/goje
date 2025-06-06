@@ -2,9 +2,9 @@ root = "."
 
 [build]
 bin = "./goje_linux_amd64"
-cmd = "make"
+cmd = "make httpd/webgui-preact/dist goje_linux_amd64"
 delay = 1000
-exclude_dir = ["./httpd/webgui-preact/node_modules"]
+exclude_dir = ["./httpd/webgui-preact/node_modules", "./httpd/webgui-preact/dist"]
 exclude_unchanged = false
 include_ext = ["go", "html", "jsx", "css"]
 kill_delay = "0s"

@@ -4,18 +4,7 @@ import { postTimer, timerModeString } from "./timer"
 
 export function Settings(p) {
   const duration = useMemo(() => [0, 1, 2].map(mode => formatDuration(p.timer.Config.Duration[mode])), [p.timer.Config.Duration])
-  useEffect(() => {
-    for (let type in ["start", "end"]) {
-      p.sse.addEventListener(type, () => {
-        const n = new Notification("Goje", { body: `${timerModeString(p.timer.Mode)} has started` });
-        document.addEventListener("visibilitychange", () => {
-          if (document.visibilityState === "visible") {
-            n.close();
-          }
-        });
-      })
-    }
-  }, [p.sse])
+
   return (
     <div id="settings-wrapper" class={"z-100 top-0 right-0 absolute flex min-w-full min-h-screen overflow-hidden" + (p.hidden ? " hidden" : "")}>
       <div id="settings-overlay" class="transition ease-in-out duration-300 grow bg-black/30" onClick={p.onClose} />
@@ -45,10 +34,9 @@ export function Settings(p) {
           <Radio id="timer-config-paused" checked={p.timer.Config.Paused} onChange={() => p.timer.Config.Paused = !p.timer.Config.Paused}>
             is timer initially paused
           </Radio>
-          <Radio id="webgui-notification" onChange={() => {
-            let notification = false;
+          <Radio id="webgui-notification" checked={p.notification} onChange={(e) => {
             Notification.requestPermission((result) => {
-              notification = result === "granted";
+              p.setNotification(result === "granted" && e.target.checked);
             });
           }}>
             send notifications
