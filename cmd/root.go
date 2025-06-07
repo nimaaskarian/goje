@@ -50,8 +50,7 @@ func init() {
 	rootCmd.Flags().Bool("no-webgui", false, "don't run webgui. webgui can't be run without the json server")
 	rootCmd.Flags().Bool("no-open-browser", false, "don't open the browser when running webgui")
 	rootCmd.Flags().BoolP("activitywatch", "", false, "daemon send's pomodoro data to activitywatch if is present")
-	rootCmd.Flags().StringP("write-file", "f", "", "write timer events in a file at given path")
-	rootCmd.Flags().BoolP("fifo", "F", false, "whether the write-file should be created as a fifo or not")
+	rootCmd.Flags().StringP("fifo", "f", "", "write timer events in a fifo at given path")
 	rootCmd.Flags().BoolP("paused", "P", false, "whether the timer is initially paused or not")
 }
 
@@ -133,10 +132,8 @@ func runDaemons() (errout error) {
 			exec.Command(path, string(content)).Run()
 		})
 	}
-	if path := viper.GetString("write-file"); path != "" {
-    if viper.GetBool("fifo") {
-      syscall.Mkfifo(path, 0644)
-    }
+	if path := viper.GetString("fifo"); path != "" {
+    syscall.Mkfifo(path, 0644)
 		writeToFile := func(t *timer.Timer) {
       content, _ := json.Marshal(t)
       errout = os.WriteFile(path, append(content, '\n'), 0644)
