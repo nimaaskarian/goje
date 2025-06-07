@@ -8,6 +8,9 @@ a fast, multi client and featureful pomodoro app that uses low resources (23MB
 of RAM with all the features enabled and couple of clients) and just dissolves
 into your setup, whatever that might be!
 
+#### goje on phone, goje on bar, goje on browser, goje everywhere
+![goje on phone, goje on bar, goje on chrome, goje everywhere](https://github.com/user-attachments/assets/da2bf498-802b-43ba-8ed9-e462f7b0d0bf)
+
 [Installation](#installation) •
 [Getting started](#getting-started) •
 [Features](#features) •
