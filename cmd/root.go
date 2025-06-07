@@ -131,7 +131,7 @@ func runDaemons() (errout error) {
 			exec.Command(path, string(content)).Run()
 		})
 	}
-	if path := viper.GetString("exec-pause"); path != "" {
+	if path := viper.GetString("write-file"); path != "" {
 		writeChanges := func(event_callback func(payload any) timer.Event) func(t *timer.Timer) {
 			return func(t *timer.Timer) {
 				content, _ := json.Marshal(event_callback(t))
