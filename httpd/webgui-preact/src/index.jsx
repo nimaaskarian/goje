@@ -13,10 +13,10 @@ import './style.css';
 export function App() {
   /** @type {[Timer, (timer: Timer) => void]} */
   const [timer, setTimer] = useState(undefined)
-  const [settings, setSettings] = useState(false)
-  const [notification, setNotification] = useState(false);
+  const [settingsEnabled, setSettingsEnabled] = useState(false)
+  const [notificationEnabled, setNotificationEnabled] = useState(false);
   const sse = useMemo(() => {
-    setNotification(localStorage.getItem('notification') === "true");
+    setNotificationEnabled(localStorage.getItem('notification') === "true");
     const sse = new EventSource("/api/timer/stream")
     sse.addEventListener("change", (e) => {
       setTimer(JSON.parse(e.data))
@@ -35,11 +35,11 @@ export function App() {
     })
     return sse;
   }, [])
-  useEffect(()=>{
+  useEffect(() => {
     if (!sse) {
       return
     }
-    const notificationHandler = (e)=> {
+    const notificationHandler = (e) => {
       const timer = JSON.parse(e.data)
       const n = new Notification("Goje", { body: `${timerModeString(timer.Mode)} has ${e.type}ed` });
       document.addEventListener("visibilitychange", () => {
@@ -48,47 +48,45 @@ export function App() {
         }
       });
     }
-    localStorage.setItem('notification', String(notification));
-    if (notification) {
+    localStorage.setItem('notification', String(notificationEnabled));
+    if (notificationEnabled) {
       sse.addEventListener("start", notificationHandler),
-      sse.addEventListener("end", notificationHandler);
+        sse.addEventListener("end", notificationHandler);
       return () => {
-        ["start", "end"].forEach((item)=>sse.removeEventListener(item, notificationHandler))
+        ["start", "end"].forEach((item) => sse.removeEventListener(item, notificationHandler))
       }
     }
-  }, [sse, notification])
+  }, [sse, notificationEnabled])
   if (timer) {
     return (
-      <div class={"h-full flex flex-col justify-center items-center bg-zinc-200 text-zinc-900 dark:text-white dark:bg-zinc-900" + (settings ? " overflow-hidden" : "")}>
-        <Settings onClose={() => setSettings(false)} timer={timer} hidden={!settings} notification={notification} setNotification={setNotification} />
-        <button title="open settings" aria-label="open settings" onClick={() => setSettings(true)} class="absolute top-4 right-4 p-2 rounded dark:bg-zinc-800 bg-white shadow-sm hover:shadow-md transition ease-in-out duration-150 hover:text-zinc-600 hover:dark:text-zinc-300 cursor-pointer z-0">
+      <div id="content" class={"h-full flex flex-col justify-center items-center bg-zinc-200 text-zinc-900 dark:text-white dark:bg-zinc-900" + (settingsEnabled ? " overflow-hidden" : "")}>
+        <Settings onClose={() => setSettingsEnabled(false)} timer={timer} hidden={!settingsEnabled} notification={notificationEnabled} setNotification={setNotificationEnabled} />
+        <button id="settings-button" title="open settings" aria-label="open settings" onClick={() => setSettingsEnabled(true)} class="absolute top-4 right-4 p-2 rounded dark:bg-zinc-800 bg-white shadow-sm hover:shadow-md transition ease-in-out duration-150 hover:text-zinc-600 hover:dark:text-zinc-300 cursor-pointer z-0">
           {cog_icon}
         </button>
-        <div class="min-w-60 text-center flex flex-col gap-4">
-          <div class="dark:bg-zinc-800 bg-white rounded-lg p-4 flex gap-4 flex-col shadow-sm hover:shadow-md transition ease-in-out duration-150">
-            <ModeSelection timer={timer} />
-            <div class="flex flex-row justify-center gap-2">
-              <Button title="-1 finished sessions" onClick={() => { timer.FinishedSessions--; postTimer(timer); }}>
-                {minus_icon}
-              </Button>
-              {timer.FinishedSessions}/{timer.Config.Sessions}
-              <Button title="+1 finished sessions" onClick={() => { timer.FinishedSessions++; postTimer(timer); }}>
-                {plus_icon}
-              </Button>
-            </div>
+        <div id="timer-wrapper" class="min-w-60 text-center dark:bg-zinc-800 bg-white rounded-lg p-4 flex gap-4 flex-col shadow-sm hover:shadow-md transition ease-in-out duration-150">
+          <ModeSelection timer={timer} />
+          <div id="timer-sessions-wrapper" class="flex flex-row justify-center gap-2">
+            <Button title="-1 finished sessions" onClick={() => { timer.FinishedSessions--; postTimer(timer); }}>
+              {minus_icon}
+            </Button>
+            {timer.FinishedSessions}/{timer.Config.Sessions}
+            <Button title="+1 finished sessions" onClick={() => { timer.FinishedSessions++; postTimer(timer); }}>
+              {plus_icon}
+            </Button>
+          </div>
 
-            <TimerCircle timer={timer} />
-            <div class="flex justify-center gap-4">
-              <Button title="Previous mode" onClick={() => { postTimer(timer, "/prevmode") }}>
-                {prev_icon}
-              </Button>
-              <Button title={`${timer.Paused ? "Resume" : "Pause"} timer`} onClick={() => { postTimer(timer, "/pause") }}>
-                {timer.Paused ? play_icon : pause_icon}
-              </Button>
-              <Button title="Next mode" onClick={() => { postTimer(timer, "/nextmode") }}>
-                {next_icon}
-              </Button>
-            </div>
+          <TimerCircle timer={timer} />
+          <div id="timer-control-wrapper" class="flex justify-center gap-4">
+            <Button id="timer-control-prev" title="Previous mode" onClick={() => { postTimer(timer, "/prevmode") }}>
+              {prev_icon}
+            </Button>
+            <Button id="timer-control-pause" title={`${timer.Paused ? "Resume" : "Pause"} timer`} onClick={() => { postTimer(timer, "/pause") }}>
+              {timer.Paused ? play_icon : pause_icon}
+            </Button>
+            <Button id="timer-control-next" title="Next mode" onClick={() => { postTimer(timer, "/nextmode") }}>
+              {next_icon}
+            </Button>
           </div>
         </div>
       </div>
@@ -96,7 +94,7 @@ export function App() {
   }
   if (timer === null) {
     return (
-      <div class="h-full flex flex-col justify-center items-center bg-zinc-200 text-zinc-900 dark:text-white dark:bg-zinc-900">
+      <div id="error-not-running" class="h-full flex flex-col justify-center items-center bg-zinc-200 text-zinc-900 dark:text-white dark:bg-zinc-900">
         Goje isn't running :(
       </div>
     )
@@ -111,8 +109,8 @@ function TimerCircle(p) {
     }
   }, [p.timer])
   return (
-    <div class="circle flex justify-center items-center" id="timer-circle" style={{ "--progress": progress }}>
-      <div class="inner-circle flex gap-2 justify-center items-center bg-white dark:bg-zinc-800">
+    <div id="timer-circle" class="flex justify-center items-center" style={{ "--progress": progress }}>
+      <div id="timer-inner-circle" class="flex gap-2 justify-center items-center bg-white dark:bg-zinc-800">
         <Button title="Reset timer" onClick={() => { postTimer(p.timer, "/reset") }}>
           {restart_icon}
         </Button>
@@ -132,7 +130,7 @@ function ModeSelection(p) {
   }, [])
 
   return (
-    <select aria-label="Timer mode" title="Timer mode" value={p.timer.Mode} class="dark:bg-zinc-900 bg-zinc-200 p-2 rounded" onChange={(e) => {
+    <select id="timer-mode" aria-label="Timer mode" title="Timer mode" value={p.timer.Mode} class="dark:bg-zinc-900 bg-zinc-200 p-2 rounded" onChange={(e) => {
       p.timer.Mode = parseInt(e.target.value);
       postTimer(p.timer);
     }}>
@@ -163,7 +161,7 @@ function Timer(props) {
   }, [props.timer.Duration, props.timer.Config.DurationPerTick])
 
   return (
-    <div class="text-2xl font-bold">
+    <div id="timer" class="text-2xl font-bold">
       {hours}{String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}{fraction}
     </div>
   );

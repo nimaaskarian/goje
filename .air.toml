@@ -1,7 +1,7 @@
 root = "."
 
 [build]
-bin = "./goje_linux_amd64"
+bin = "./goje_linux_amd64 -c tmp/dummyconfig.json --tcp-address '' --http-address :7888"
 cmd = "make httpd/webgui-preact/dist goje_linux_amd64"
 delay = 1000
 exclude_dir = ["./httpd/webgui-preact/node_modules", "./httpd/webgui-preact/dist"]

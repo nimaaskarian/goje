@@ -53,8 +53,6 @@ func init() {
 	rootCmd.Flags().Bool("no-open-browser", false, "don't open the browser when running webgui")
 	rootCmd.Flags().BoolP("activitywatch", "", false, "daemon send's pomodoro data to activitywatch if is present")
 	rootCmd.Flags().StringP("write-file", "w", "", "write timer events in a file at given path")
-	readConfig()
-	viper.BindPFlags(rootCmd.Flags())
 }
 
 type SigEvent struct {
@@ -74,6 +72,15 @@ var rootCmd = &cobra.Command{
 	Long:          "goje is a pomodoro timer server with modern features, suitable for both everyday users and computer nerds",
 	SilenceErrors: true,
 	SilenceUsage:  true,
+  PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+    if err := readConfig(); err != nil {
+      return err
+    }
+    viper.SetEnvPrefix("goje")
+    viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+    viper.AutomaticEnv()
+    return viper.BindPFlags(cmd.Flags())
+  },
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := runDaemons(); err != nil {
 			return err

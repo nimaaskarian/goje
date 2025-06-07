@@ -23,7 +23,7 @@ export function Radio(p) {
 // also sets the title prop as its aria-label as well. a11y yay
 export function Button(props) {
   return (
-    <button title={props.title} aria-label={props.title} onClick={props.onClick} class="cursor-pointer transition hover:text-zinc-600 hover:dark:text-zinc-300 ease-out">
+    <button id={props.id} title={props.title} aria-label={props.title} onClick={props.onClick} class="cursor-pointer transition hover:text-zinc-600 hover:dark:text-zinc-300 ease-out">
       {props.children}
     </button>
   );
