@@ -18,3 +18,7 @@ func OpenURL(url string) error {
 func ConfigDir() string {
 	return filepath.Join(os.Getenv("APPDATA"), "goje")
 }
+
+// windows got no fifos lmao what.
+func MakeFifo(path string) {
+}

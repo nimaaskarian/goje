@@ -133,7 +133,7 @@ func runDaemons() (errout error) {
 		})
 	}
 	if path := viper.GetString("fifo"); path != "" {
-    syscall.Mkfifo(path, 0644)
+    utils.MakeFifo(path)
 		writeToFile := func(t *timer.Timer) {
       content, _ := json.Marshal(t)
       errout = os.WriteFile(path, append(content, '\n'), 0644)

@@ -14,3 +14,7 @@ func OpenURL(url string) error {
 func ConfigDir() string {
 	return filepath.Join(os.Getenv("HOME"), "Library", "Application Support", "goje")
 }
+
+func MakeFifo(path string) {
+  syscall.Mkfifo(path, 0644)
+}
