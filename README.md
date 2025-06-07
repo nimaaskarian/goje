@@ -1,6 +1,10 @@
 <div align="center">
 
+ <img src="https://github.com/nimaaskarian/goje/blob/master/httpd/webgui-preact/public/assets/goje-192x192.png" width="90" height="90" title="goje"/>
+ 
 # goje
+
+
 ![GitHub top language](https://img.shields.io/github/languages/top/nimaaskarian/goje?color=blue)
 
 goje (/ˈɡoʊ.dʒɛ/, meaning tomato in Persian) is an event-based pomodoro server;
