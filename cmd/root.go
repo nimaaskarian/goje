@@ -2,8 +2,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -70,7 +68,6 @@ var rootCmd = &cobra.Command{
 	Use:           "goje",
 	Short:         "a pomodoro timer server",
 	Long:          "goje is a pomodoro timer server with modern features, suitable for both everyday users and computer nerds",
-	SilenceErrors: true,
 	SilenceUsage:  true,
   PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
     if err := readConfig(); err != nil {
@@ -104,8 +101,11 @@ func readConfig() error {
 		viper.SetConfigType("toml")
 		viper.AddConfigPath(utils.ConfigDir())
 	}
-	if err := viper.ReadInConfig(); err != nil && !errors.Is(err, viper.ConfigFileNotFoundError{}) {
-		return err
+	if err := viper.ReadInConfig(); err != nil {
+    _, ok := err.(viper.ConfigFileNotFoundError)
+    if !ok {
+      return err
+    }
 	}
 	return nil
 }
@@ -204,7 +204,6 @@ func runWebgui(address string) {
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+    os.Exit(1)
 	}
 }
