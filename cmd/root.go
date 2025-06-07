@@ -133,15 +133,13 @@ func runDaemons() (errout error) {
 		})
 	}
 	if path := viper.GetString("write-file"); path != "" {
-		writeChanges := func(event_callback func(payload any) timer.Event) func(t *timer.Timer) {
-			return func(t *timer.Timer) {
-				content, _ := json.Marshal(event_callback(t))
-				errout = os.WriteFile(path, append(content, '\n'), 0644)
-			}
+		writeToFile := func(t *timer.Timer) {
+      content, _ := json.Marshal(t)
+      errout = os.WriteFile(path, append(content, '\n'), 0644)
 		}
-		config.Timer.OnChange.Append(writeChanges(timer.OnChangeEvent))
-		config.Timer.OnModeEnd.Append(writeChanges(timer.OnModeEndEvent))
-		config.Timer.OnModeStart.Append(writeChanges(timer.OnModeStartEvent))
+		config.Timer.OnChange.Append(writeToFile)
+		config.Timer.OnModeEnd.Append(writeToFile)
+		config.Timer.OnModeStart.Append(writeToFile)
 	}
 	if viper.GetBool("activitywatch") {
 		aw := activitywatch.Watcher{}
