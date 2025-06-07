@@ -4,8 +4,9 @@
 ![GitHub top language](https://img.shields.io/github/languages/top/nimaaskarian/goje?color=blue)
 
 goje (/ˈɡoʊ.dʒɛ/, meaning tomato in Persian) is an event-based pomodoro server;
-a fast, multi client and featureful pomodoro app that uses low resources (23MB of RAM with
-all the features enabled) and just dissolves into your setup, whatever that might be!
+a fast, multi client and featureful pomodoro app that uses low resources (23MB
+of RAM with all the features enabled and couple of clients) and just dissolves
+into your setup, whatever that might be!
 
 [Installation](#installation) •
 [Getting started](#getting-started) •
