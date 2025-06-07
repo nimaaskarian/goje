@@ -67,7 +67,7 @@ You can turn on the activitywatch watcher using the config option `activitywatch
 ![activitywatch bucket](https://github.com/user-attachments/assets/3bd1ffc6-1cc7-4a6a-a110-728ee1823507)
 
 ### Webgui
-webgui is intuitive and easy to use. its run by default, and opens in your browser. it supports both light and dark mode, based on your browser's default.
+webgui is intuitive and easy to use. its run by default, and opens in your browser. it supports both light and dark modes, based on your browser's default.
 ![goje dark mode](https://github.com/user-attachments/assets/a31a8e00-22b6-4b6f-87a1-4a7bc8e0851e)
 
 
