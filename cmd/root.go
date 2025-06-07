@@ -50,7 +50,8 @@ func init() {
 	rootCmd.Flags().Bool("no-webgui", false, "don't run webgui. webgui can't be run without the json server")
 	rootCmd.Flags().Bool("no-open-browser", false, "don't open the browser when running webgui")
 	rootCmd.Flags().BoolP("activitywatch", "", false, "daemon send's pomodoro data to activitywatch if is present")
-	rootCmd.Flags().StringP("write-file", "w", "", "write timer events in a file at given path")
+	rootCmd.Flags().StringP("write-file", "f", "", "write timer events in a file at given path")
+	rootCmd.Flags().BoolP("paused", "P", false, "whether the timer is initially paused or not")
 }
 
 type SigEvent struct {
@@ -65,31 +66,31 @@ func (e SigEvent) Name() string {
 }
 
 var rootCmd = &cobra.Command{
-	Use:           "goje",
-	Short:         "a pomodoro timer server",
-	Long:          "goje is a pomodoro timer server with modern features, suitable for both everyday users and computer nerds",
-	SilenceUsage:  true,
-  PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-    if err := readConfig(); err != nil {
-      return err
-    }
-    viper.SetEnvPrefix("goje")
-    viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-    viper.AutomaticEnv()
-    return viper.BindPFlags(cmd.Flags())
-  },
+	Use:          "goje",
+	Short:        "a pomodoro timer server",
+	Long:         "goje is a pomodoro timer server with modern features, suitable for both everyday users and computer nerds",
+	SilenceUsage: true,
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		if err := readConfig(); err != nil {
+			return err
+		}
+		viper.SetEnvPrefix("goje")
+		viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+		viper.AutomaticEnv()
+		return viper.BindPFlags(cmd.Flags())
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if err := runDaemons(); err != nil {
 			return err
 		}
-    sig := make(chan os.Signal, 1)
-    signal.Notify(sig, syscall.SIGHUP)
-    for {
-      <-sig
-      config.http_deamon.UpdateClients(SigEvent{
-        name: "restart",
-      })
-    }
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, syscall.SIGHUP)
+		for {
+			<-sig
+			config.http_deamon.UpdateClients(SigEvent{
+				name: "restart",
+			})
+		}
 	},
 }
 
@@ -102,10 +103,10 @@ func readConfig() error {
 		viper.AddConfigPath(utils.ConfigDir())
 	}
 	if err := viper.ReadInConfig(); err != nil {
-    _, ok := err.(viper.ConfigFileNotFoundError)
-    if !ok {
-      return err
-    }
+		_, ok := err.(viper.ConfigFileNotFoundError)
+		if !ok {
+			return err
+		}
 	}
 	return nil
 }
@@ -148,18 +149,18 @@ func runDaemons() (errout error) {
 		aw.AddEventWatchers(&config.Timer)
 	}
 	t := timer.Timer{}
-  config.Timer.Duration = [...]time.Duration{
-    viper.GetDuration("pomodoro-duration"),
-    viper.GetDuration("short-break-duration"),
-    viper.GetDuration("long-break-duration"),
-  }
-  config.Timer.Paused = viper.GetBool("paused");
+	config.Timer.Duration = [...]time.Duration{
+		viper.GetDuration("pomodoro-duration"),
+		viper.GetDuration("short-break-duration"),
+		viper.GetDuration("long-break-duration"),
+	}
+	config.Timer.Paused = viper.GetBool("paused")
 
 	t.Config = &config.Timer
 
 	if address := viper.GetString("tcp-address"); address != "" {
 		tcp_daemon := tcpd.Daemon{
-			Timer:    &t,
+			Timer: &t,
 		}
 		if err := tcp_daemon.InitializeListener(address); err != nil {
 			return err
@@ -204,6 +205,6 @@ func runWebgui(address string) {
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-    os.Exit(1)
+		os.Exit(1)
 	}
 }
