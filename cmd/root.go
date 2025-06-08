@@ -80,6 +80,19 @@ var rootCmd = &cobra.Command{
 		return viper.BindPFlags(cmd.Flags())
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
+    sigc := make(chan os.Signal, 1)
+    signal.Notify(sigc,
+      syscall.SIGINT,
+      syscall.SIGTERM,
+      syscall.SIGQUIT,
+    )
+    go func() {
+      _ = <-sigc
+      if path := viper.GetString("fifo"); path != "" {
+        os.Remove(path)
+        os.Exit(1)
+      }
+    }()
 		if err := runDaemons(); err != nil {
 			return err
 		}
@@ -87,6 +100,7 @@ var rootCmd = &cobra.Command{
 		signal.Notify(sig, syscall.SIGHUP)
 		for {
 			<-sig
+      cmd.PersistentPreRun(cmd, args);
 			config.http_deamon.UpdateClients(SigEvent{
 				name: "restart",
 			})
@@ -133,10 +147,10 @@ func runDaemons() (errout error) {
 		})
 	}
 	if path := viper.GetString("fifo"); path != "" {
-    utils.MakeFifo(path)
+		utils.MakeFifo(path)
 		writeToFile := func(t *timer.Timer) {
-      content, _ := json.Marshal(t)
-      errout = os.WriteFile(path, append(content, '\n'), 0644)
+			content, _ := json.Marshal(t)
+			errout = os.WriteFile(path, append(content, '\n'), 0644)
 		}
 		config.Timer.OnChange.Append(writeToFile)
 		config.Timer.OnModeEnd.Append(writeToFile)

@@ -32,6 +32,7 @@ func (t *Timer) Init() {
 	t.FinishedSessions = 0
 	t.Paused = t.Config.Paused
 	t.SeekTo(t.Config.Duration[t.Mode])
+  t.Config.OnChange.Run(t);
 	if t.Paused {
 		t.Config.OnPause.AppendOnce(func(t *Timer) {
 			if !t.Paused {
