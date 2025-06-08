@@ -1,3 +1,6 @@
+arch-wiki:
+    task: add to arch wiki
+    created-at: 2025-06-08T06:34:31.111986649+03:30
 config:
     task: add config in webgui option
     done: true

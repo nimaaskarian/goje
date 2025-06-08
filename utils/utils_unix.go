@@ -28,6 +28,6 @@ func ConfigDir() string {
 	return filepath.Join(base, "goje")
 }
 
-func MakeFifo(path string) {
+func Mkfifo(path string) {
   syscall.Mkfifo(path, 0644)
 }

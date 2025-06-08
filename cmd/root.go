@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"encoding/json"
+	"errors"
+	"log/slog"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -26,7 +28,26 @@ type AppConfig struct {
 	http_deamon *httpd.Daemon
 }
 
+type LogLevel slog.Level
+
+func (level *LogLevel) Set(v string) error {
+	switch v {
+	case "warning", "warn":
+		*level = LogLevel(slog.LevelWarn)
+	case "info":
+		*level = LogLevel(slog.LevelInfo)
+	case "debug":
+		*level = LogLevel(slog.LevelDebug)
+	case "error", "":
+		*level = LogLevel(slog.LevelError)
+	default:
+		return errors.New(`loglevel must be one of "info", "warn", "debug, or "error"`)
+	}
+	return nil
+}
+
 var config = AppConfig{Timer: timer.DefaultConfig}
+var loglevel LogLevel
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&config_file, "config", "c", "", "path to config file. uses default if not specified")
@@ -41,6 +62,10 @@ func init() {
 			"duration of "+lower+" sections of the timer",
 		)
 	}
+	rootCmd.Flags().String("loglevel", "error", "log level of goje")
+  rootCmd.RegisterFlagCompletionFunc("loglevel", func(cmd *cobra.Command, args []string, to_complete string) ([] cobra.Completion, cobra.ShellCompDirective){
+    return []string{"error", "warn", "debug", "info"}, cobra.ShellCompDirectiveNoFileComp;
+  })
 	rootCmd.Flags().String("custom-css", "", "a custom css file to load on the website")
 	rootCmd.Flags().String("exec-start", "", "command to run when any timer mode starts (run's the script with json of timer as the first arguemnt)")
 	rootCmd.Flags().String("exec-end", "", "command to run when any timer mode ends (run's the script with json of timer as the first arguemnt)")
@@ -77,30 +102,38 @@ var rootCmd = &cobra.Command{
 		viper.SetEnvPrefix("goje")
 		viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 		viper.AutomaticEnv()
-		return viper.BindPFlags(cmd.Flags())
+		if err := viper.BindPFlags(cmd.Flags()); err != nil {
+			return err
+		}
+		if err := loglevel.Set(viper.GetString("loglevel")); err != nil {
+			return err
+		}
+		slog.SetLogLoggerLevel(slog.Level(loglevel))
+		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-    sigc := make(chan os.Signal, 1)
-    signal.Notify(sigc,
-      syscall.SIGINT,
-      syscall.SIGTERM,
-      syscall.SIGQUIT,
-    )
-    go func() {
-      _ = <-sigc
-      if path := viper.GetString("fifo"); path != "" {
-        os.Remove(path)
-        os.Exit(1)
-      }
-    }()
-		if err := runDaemons(); err != nil {
+		sigc := make(chan os.Signal, 1)
+		signal.Notify(sigc,
+			syscall.SIGINT,
+			syscall.SIGTERM,
+			syscall.SIGQUIT,
+		)
+		t := timer.Timer{}
+		go func() {
+			sig := <-sigc
+			slog.Debug("caught deadly signal", "signal", sig)
+			t.Config.OnQuit.Run(&t)
+			slog.Debug("clean up finished. quitting")
+			os.Exit(1)
+		}()
+		if err := runDaemons(&t); err != nil {
 			return err
 		}
 		sig := make(chan os.Signal, 1)
 		signal.Notify(sig, syscall.SIGHUP)
 		for {
 			<-sig
-      cmd.PersistentPreRun(cmd, args);
+			cmd.PersistentPreRun(cmd, args)
 			config.http_deamon.UpdateClients(SigEvent{
 				name: "restart",
 			})
@@ -110,6 +143,10 @@ var rootCmd = &cobra.Command{
 
 func readConfig() error {
 	if config_file != "" {
+		// if the config_file arg doesn't exist
+		if _, err := os.Stat(config_file); os.IsNotExist(err) {
+			return err
+		}
 		viper.SetConfigFile(config_file)
 	} else {
 		viper.SetConfigName("config")
@@ -121,11 +158,12 @@ func readConfig() error {
 		if !ok {
 			return err
 		}
+		slog.Debug("default config not found. using the default values")
 	}
 	return nil
 }
 
-func runDaemons() (errout error) {
+func runDaemons(t *timer.Timer) (errout error) {
 	if path := viper.GetString("exec-start"); path != "" {
 		config.Timer.OnModeStart.Append(func(t *timer.Timer) {
 			content, _ := json.Marshal(t)
@@ -147,21 +185,31 @@ func runDaemons() (errout error) {
 		})
 	}
 	if path := viper.GetString("fifo"); path != "" {
-		utils.MakeFifo(path)
-		writeToFile := func(t *timer.Timer) {
-			content, _ := json.Marshal(t)
-			errout = os.WriteFile(path, append(content, '\n'), 0644)
-		}
-		config.Timer.OnChange.Append(writeToFile)
-		config.Timer.OnModeEnd.Append(writeToFile)
-		config.Timer.OnModeStart.Append(writeToFile)
+    utils.Mkfifo(path)
+    writeToFile := func(t *timer.Timer) {
+      content, _ := json.Marshal(t)
+      go func() {
+        if err := os.WriteFile(path, append(content, '\n'), 0644); err != nil {
+          errout = err
+        }
+      }()
+      slog.Debug("writing to fifo finished")
+    }
+    slog.Debug("setting up fifo events")
+    config.Timer.OnQuit.Append(func(*timer.Timer) {
+      os.Remove(path)
+    })
+    // initially write to fifo
+    writeToFile(t)
+    config.Timer.OnChange.Append(writeToFile)
+    config.Timer.OnModeEnd.Append(writeToFile)
+    config.Timer.OnModeStart.Append(writeToFile)
 	}
 	if viper.GetBool("activitywatch") {
 		aw := activitywatch.Watcher{}
 		aw.Init()
 		aw.AddEventWatchers(&config.Timer)
 	}
-	t := timer.Timer{}
 	config.Timer.Duration = [...]time.Duration{
 		viper.GetDuration("pomodoro-duration"),
 		viper.GetDuration("short-break-duration"),
@@ -173,7 +221,7 @@ func runDaemons() (errout error) {
 
 	if address := viper.GetString("tcp-address"); address != "" {
 		tcp_daemon := tcpd.Daemon{
-			Timer: &t,
+			Timer: t,
 		}
 		if err := tcp_daemon.InitializeListener(address); err != nil {
 			return err
@@ -182,7 +230,7 @@ func runDaemons() (errout error) {
 	}
 	if address := viper.GetString("http-address"); address != "" {
 		config.http_deamon = &httpd.Daemon{
-			Timer:   &t,
+			Timer:   t,
 			Clients: &sync.Map{},
 		}
 		config.Timer.OnChange.Append(config.http_deamon.UpdateAllChangeEvent)

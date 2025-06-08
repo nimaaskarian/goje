@@ -30,6 +30,10 @@ func (d *Watcher) Init() {
 	d.client.CreateBucket(d.bucket_id, EVENT_TYPE)
 }
 
+func (d *Watcher) pushCurrentModeNow(t *timer.Timer) {
+  d.pushCurrentMode(t, time.Now())
+}
+
 func (d *Watcher) pushCurrentMode(t *timer.Timer, now time.Time) {
 	duration := now.UTC().Sub(d.started)
 	mode_string := t.Mode.String()
@@ -48,9 +52,8 @@ func (d *Watcher) AddEventWatchers(config *timer.TimerConfig) {
 	config.OnModeStart.Append(func(t *timer.Timer) {
 		d.started = time.Now().UTC()
 	})
-	config.OnModeEnd.Append(func(t *timer.Timer) {
-		d.pushCurrentMode(t, time.Now().UTC())
-	})
+	config.OnModeEnd.Append(d.pushCurrentModeNow)
+	config.OnQuit.Append(d.pushCurrentModeNow)
 	config.OnPause.Append(func(t *timer.Timer) {
 		if t.Paused {
 			now := time.Now().UTC()

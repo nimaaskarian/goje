@@ -11,6 +11,7 @@ type TimerConfig struct {
 	OnModeStart     TimerConfigEvent `json:"-"`
 	OnChange        TimerConfigEvent `json:"-"`
 	OnPause         TimerConfigEvent `json:"-"`
+	OnQuit          TimerConfigEvent `json:"-"`
 	Paused          bool
 	DurationPerTick time.Duration `mapstructure:"duration-per-tick"`
 }

@@ -4,7 +4,6 @@ import (
 	"embed"
 	"io"
 	"io/fs"
-	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -45,7 +44,6 @@ func (d *Daemon) JsonRoutes() {
 		}
 	})
 	d.router.GET("/api/timer/stream", func(c *gin.Context) {
-		slog.SetLogLoggerLevel(slog.LevelDebug)
 		c.Header("Content-Type", "text/event-stream")
 		c.Header("Connection", "keep-alive")
 		c.Header("Transfer-Encoding", "chunked")

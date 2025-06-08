@@ -20,5 +20,5 @@ func ConfigDir() string {
 }
 
 // windows got no fifos lmao what.
-func MakeFifo(path string) {
+func Mkfifo(path string) {
 }
