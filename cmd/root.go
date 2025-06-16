@@ -104,12 +104,13 @@ var rootCmd = &cobra.Command{
 	PreRunE: func(cmd *cobra.Command, args []string) (errout error) {
     return setupConfigForCmd(cmd)
 	},
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) (errout error) {
 		sigc := make(chan os.Signal, 1)
 		signal.Notify(sigc,
 			syscall.SIGINT,
 			syscall.SIGTERM,
 			syscall.SIGQUIT,
+      syscall.SIGHUP,
 		)
 		t := timer.Timer{}
 		go func() {
@@ -123,10 +124,12 @@ var rootCmd = &cobra.Command{
 			return err
 		}
 		sig := make(chan os.Signal, 1)
-		signal.Notify(sig, syscall.SIGHUP)
+		signal.Notify(sig, syscall.SIGUSR2)
 		for {
 			<-sig
-			cmd.PersistentPreRun(cmd, args)
+      if err := setupConfigForCmd(cmd); err != nil {
+        errout = err
+      }
 			config.http_deamon.UpdateClients(SigEvent{
 				name: "restart",
 			})
