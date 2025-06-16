@@ -257,6 +257,7 @@ func runDaemons(t *timer.Timer) (errout error) {
 		if err := tcp_daemon.InitializeListener(config.TcpAddress); err != nil {
 			return err
 		}
+    slog.Info("running tcp daemon", "address", config.TcpAddress)
 		go tcp_daemon.Run()
 	}
 	if config.HttpAddress != "" {
@@ -271,6 +272,7 @@ func runDaemons(t *timer.Timer) (errout error) {
 		if !config.NoWebgui {
 			go runWebgui(config.HttpAddress)
 		}
+    slog.Info("running http daemon", "address", config.HttpAddress)
 		go func() {
 			errout = config.http_deamon.Run(config.HttpAddress)
 		}()
@@ -281,6 +283,7 @@ func runDaemons(t *timer.Timer) (errout error) {
 }
 
 func runWebgui(address string) {
+  slog.Debug("setting up webgui routes")
 	config.http_deamon.WebguiRoutes(config.CustomCss)
 	if !config.NoOpenBrowser {
 		if strings.HasPrefix(address, "http://") {
