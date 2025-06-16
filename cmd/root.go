@@ -69,7 +69,7 @@ func init() {
 	rootCmd.Flags().BoolP("paused", "p", false, "timer is paused by default")
 	rootCmd.MarkFlagsMutuallyExclusive("paused", "not-paused")
 	rootCmd.Flags().DurationP("duration-per-tick", "d", time.Second, "duration per each tick, that determines the accuracy of timer")
-	rootCmd.Flags().String("loglevel", "error", "log level of goje")
+	rootCmd.PersistentFlags().String("loglevel", "error", "log level of goje")
 	rootCmd.RegisterFlagCompletionFunc("loglevel", func(cmd *cobra.Command, args []string, to_complete string) ([]cobra.Completion, cobra.ShellCompDirective) {
 		return []string{"error", "warn", "debug", "info"}, cobra.ShellCompDirectiveNoFileComp
 	})
@@ -101,18 +101,8 @@ var rootCmd = &cobra.Command{
 	Short:        "a pomodoro timer server",
 	Long:         "goje is a pomodoro timer server with modern features, suitable for both everyday users and computer nerds",
 	SilenceUsage: true,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) (errout error) {
-		if err := readConfig(cmd); err != nil {
-			return err
-		}
-		viper.OnConfigChange(func(e fsnotify.Event) {
-			slog.Info("config changed", "path", e.Name)
-			if err := readConfig(cmd); err != nil {
-				errout = err
-			}
-		})
-		viper.WatchConfig()
-		return nil
+	PreRunE: func(cmd *cobra.Command, args []string) (errout error) {
+    return setupConfigForCmd(cmd)
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		sigc := make(chan os.Signal, 1)
@@ -144,6 +134,21 @@ var rootCmd = &cobra.Command{
 	},
 }
 
+func setupConfigForCmd(cmd *cobra.Command) (errout error) {
+	if err := readConfig(cmd); err != nil {
+		return err
+	}
+	viper.OnConfigChange(func(e fsnotify.Event) {
+		slog.Info("config changed", "path", e.Name)
+		if err := readConfig(cmd); err != nil {
+			errout = err
+		}
+	})
+	viper.WatchConfig()
+	return nil
+}
+
+
 func readConfig(cmd *cobra.Command) error {
 	if config_file != "" {
 		// if the config_file arg is passed and doesn't exist
@@ -166,24 +171,25 @@ func readConfig(cmd *cobra.Command) error {
 	viper.SetEnvPrefix("goje")
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
 	viper.AutomaticEnv()
-	if err := viper.BindPFlags(cmd.Flags()); err != nil {
+	if err := viper.BindPFlags(cmd.LocalFlags()); err != nil {
 		return err
 	}
+	viper.BindPFlag("loglevel", cmd.PersistentFlags().Lookup("loglevel"))
 	if err := viper.Unmarshal(&config); err != nil {
 		return err
 	}
 	timer_viper := viper.Sub("timer")
-  if timer_viper != nil {
-    timer_viper.SetEnvPrefix("goje")
-    timer_viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-    timer_viper.AutomaticEnv()
-    if err := timer_viper.BindPFlags(cmd.Flags()); err != nil {
-      return err
-    }
-    if err := timer_viper.Unmarshal(&config.Timer); err != nil {
-      return err
-    }
-  }
+	if timer_viper != nil {
+		timer_viper.SetEnvPrefix("goje")
+		timer_viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+		timer_viper.AutomaticEnv()
+		if err := timer_viper.BindPFlags(cmd.LocalFlags()); err != nil {
+			return err
+		}
+		if err := timer_viper.Unmarshal(&config.Timer); err != nil {
+			return err
+		}
+	}
 	if ok, err := cmd.Flags().GetBool("not-paused"); ok && err == nil {
 		config.Timer.Paused = false
 	}
