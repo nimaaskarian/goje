@@ -173,15 +173,17 @@ func readConfig(cmd *cobra.Command) error {
 		return err
 	}
 	timer_viper := viper.Sub("timer")
-	timer_viper.SetEnvPrefix("goje")
-	timer_viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-	timer_viper.AutomaticEnv()
-	if err := timer_viper.BindPFlags(cmd.Flags()); err != nil {
-		return err
-	}
-	if err := timer_viper.Unmarshal(&config.Timer); err != nil {
-		return err
-	}
+  if timer_viper != nil {
+    timer_viper.SetEnvPrefix("goje")
+    timer_viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+    timer_viper.AutomaticEnv()
+    if err := timer_viper.BindPFlags(cmd.Flags()); err != nil {
+      return err
+    }
+    if err := timer_viper.Unmarshal(&config.Timer); err != nil {
+      return err
+    }
+  }
 	if ok, err := cmd.Flags().GetBool("not-paused"); ok && err == nil {
 		config.Timer.Paused = false
 	}
