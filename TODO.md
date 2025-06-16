@@ -1,0 +1,5 @@
+- [x] mutex: add a mutex for deleting clients (2w ago)
+- [x] config: add config in webgui option (2w ago)
+- [ ] arch-wiki: add to arch wiki
+- [ ] aur: add to aur
+- [ ] reseting: add reseting and context

@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/nimaaskarian/goje/activitywatch"
 	"github.com/nimaaskarian/goje/httpd"
 	"github.com/nimaaskarian/goje/tcpd"
@@ -24,8 +25,19 @@ import (
 var config_file string
 
 type AppConfig struct {
-	Timer       timer.TimerConfig
-	http_deamon *httpd.Daemon
+	Timer         timer.TimerConfig
+	CustomCss     string        `mapstructure:"custom-css"`
+	Activitywatch bool          `mapstructure:"activitywatch"`
+	NoWebgui      bool          `mapstructure:"no-webgui"`
+	NoOpenBrowser bool          `mapstructure:"no-open-browser"`
+	ExecStart     string        `mapstructure:"exec-start"`
+	ExecEnd       string        `mapstructure:"exec-end"`
+	ExecPause     string        `mapstructure:"exec-pause"`
+	HttpAddress   string        `mapstructure:"http-address"`
+	TcpAddress    string        `mapstructure:"tcp-address"`
+	Fifo          string        `mapstructure:"fifo"`
+	Loglevel      string        `mapstructure:"loglevel"`
+	http_deamon   *httpd.Daemon `mapstructure:"-"`
 }
 
 type LogLevel slog.Level
@@ -51,21 +63,16 @@ var loglevel LogLevel
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&config_file, "config", "c", "", "path to config file. uses default if not specified")
-	for mode := range timer.MODE_MAX {
-		lower := strings.ToLower(mode.String())
-		worm_case := strings.ReplaceAll(lower, " ", "-")
-		rootCmd.Flags().DurationVarP(
-			&config.Timer.Duration[mode],
-			worm_case+"-duration",
-			worm_case[0:1],
-			timer.DefaultConfig.Duration[mode],
-			"duration of "+lower+" sections of the timer",
-		)
-	}
+	rootCmd.Flags().DurationSliceP("duration", "D", timer.DefaultConfig.Duration[:], "duration of timer as pomodoro,short break,long break")
+	rootCmd.Flags().BoolP("not-paused", "P", false, "timer is not paused by default")
+	rootCmd.Flags().UintP("sessions", "s", timer.DefaultConfig.Sessions, "count of sessions in timer")
+	rootCmd.Flags().BoolP("paused", "p", false, "timer is paused by default")
+	rootCmd.MarkFlagsMutuallyExclusive("paused", "not-paused")
+	rootCmd.Flags().DurationP("duration-per-tick", "d", time.Second, "duration per each tick, that determines the accuracy of timer")
 	rootCmd.Flags().String("loglevel", "error", "log level of goje")
-  rootCmd.RegisterFlagCompletionFunc("loglevel", func(cmd *cobra.Command, args []string, to_complete string) ([] cobra.Completion, cobra.ShellCompDirective){
-    return []string{"error", "warn", "debug", "info"}, cobra.ShellCompDirectiveNoFileComp;
-  })
+	rootCmd.RegisterFlagCompletionFunc("loglevel", func(cmd *cobra.Command, args []string, to_complete string) ([]cobra.Completion, cobra.ShellCompDirective) {
+		return []string{"error", "warn", "debug", "info"}, cobra.ShellCompDirectiveNoFileComp
+	})
 	rootCmd.Flags().String("custom-css", "", "a custom css file to load on the website")
 	rootCmd.Flags().String("exec-start", "", "command to run when any timer mode starts (run's the script with json of timer as the first arguemnt)")
 	rootCmd.Flags().String("exec-end", "", "command to run when any timer mode ends (run's the script with json of timer as the first arguemnt)")
@@ -76,7 +83,6 @@ func init() {
 	rootCmd.Flags().Bool("no-open-browser", false, "don't open the browser when running webgui")
 	rootCmd.Flags().BoolP("activitywatch", "", false, "daemon send's pomodoro data to activitywatch if is present")
 	rootCmd.Flags().StringP("fifo", "f", "", "write timer events in a fifo at given path")
-	rootCmd.Flags().BoolP("paused", "P", false, "whether the timer is initially paused or not")
 }
 
 type SigEvent struct {
@@ -95,20 +101,17 @@ var rootCmd = &cobra.Command{
 	Short:        "a pomodoro timer server",
 	Long:         "goje is a pomodoro timer server with modern features, suitable for both everyday users and computer nerds",
 	SilenceUsage: true,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		if err := readConfig(); err != nil {
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) (errout error) {
+		if err := readConfig(cmd); err != nil {
 			return err
 		}
-		viper.SetEnvPrefix("goje")
-		viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
-		viper.AutomaticEnv()
-		if err := viper.BindPFlags(cmd.Flags()); err != nil {
-			return err
-		}
-		if err := loglevel.Set(viper.GetString("loglevel")); err != nil {
-			return err
-		}
-		slog.SetLogLoggerLevel(slog.Level(loglevel))
+		viper.OnConfigChange(func(e fsnotify.Event) {
+			slog.Info("config changed", "path", e.Name)
+			if err := readConfig(cmd); err != nil {
+				errout = err
+			}
+		})
+		viper.WatchConfig()
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -141,9 +144,9 @@ var rootCmd = &cobra.Command{
 	},
 }
 
-func readConfig() error {
+func readConfig(cmd *cobra.Command) error {
 	if config_file != "" {
-		// if the config_file arg doesn't exist
+		// if the config_file arg is passed and doesn't exist
 		if _, err := os.Stat(config_file); os.IsNotExist(err) {
 			return err
 		}
@@ -160,75 +163,95 @@ func readConfig() error {
 		}
 		slog.Debug("default config not found. using the default values")
 	}
+	viper.SetEnvPrefix("goje")
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	viper.AutomaticEnv()
+	if err := viper.BindPFlags(cmd.Flags()); err != nil {
+		return err
+	}
+	if err := viper.Unmarshal(&config); err != nil {
+		return err
+	}
+	timer_viper := viper.Sub("timer")
+	timer_viper.SetEnvPrefix("goje")
+	timer_viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	timer_viper.AutomaticEnv()
+	if err := timer_viper.BindPFlags(cmd.Flags()); err != nil {
+		return err
+	}
+	if err := timer_viper.Unmarshal(&config.Timer); err != nil {
+		return err
+	}
+	if ok, err := cmd.Flags().GetBool("not-paused"); ok && err == nil {
+		config.Timer.Paused = false
+	}
+	if err := loglevel.Set(config.Loglevel); err != nil {
+		return err
+	}
+	slog.SetLogLoggerLevel(slog.Level(loglevel))
+	slog.Info("using configuration", "path", viper.ConfigFileUsed())
 	return nil
 }
 
 func runDaemons(t *timer.Timer) (errout error) {
-	if path := viper.GetString("exec-start"); path != "" {
+	if config.ExecStart != "" {
 		config.Timer.OnModeStart.Append(func(t *timer.Timer) {
 			content, _ := json.Marshal(t)
-			if err := exec.Command(path, string(content)).Run(); err != nil {
+			if err := exec.Command(config.ExecStart, string(content)).Run(); err != nil {
 				errout = err
 			}
 		})
 	}
-	if path := viper.GetString("exec-end"); path != "" {
+	if config.ExecEnd != "" {
 		config.Timer.OnModeEnd.Append(func(t *timer.Timer) {
 			content, _ := json.Marshal(t)
-			exec.Command(path, string(content)).Run()
+			exec.Command(config.ExecEnd, string(content)).Run()
 		})
 	}
-	if path := viper.GetString("exec-pause"); path != "" {
+	if config.ExecPause != "" {
 		config.Timer.OnPause.Append(func(t *timer.Timer) {
 			content, _ := json.Marshal(t)
-			exec.Command(path, string(content)).Run()
+			exec.Command(config.ExecPause, string(content)).Run()
 		})
 	}
-	if path := viper.GetString("fifo"); path != "" {
-    utils.Mkfifo(path)
-    writeToFile := func(t *timer.Timer) {
-      content, _ := json.Marshal(t)
-      go func() {
-        if err := os.WriteFile(path, append(content, '\n'), 0644); err != nil {
-          errout = err
-        }
-      }()
-      slog.Debug("writing to fifo finished")
-    }
-    slog.Debug("setting up fifo events")
-    config.Timer.OnQuit.Append(func(*timer.Timer) {
-      os.Remove(path)
-    })
-    // initially write to fifo
-    writeToFile(t)
-    config.Timer.OnChange.Append(writeToFile)
-    config.Timer.OnModeEnd.Append(writeToFile)
-    config.Timer.OnModeStart.Append(writeToFile)
+	if config.Fifo != "" {
+		utils.Mkfifo(config.Fifo)
+		writeToFile := func(t *timer.Timer) {
+			content, _ := json.Marshal(t)
+			go func() {
+				if err := os.WriteFile(config.Fifo, append(content, '\n'), 0644); err != nil {
+					errout = err
+				}
+			}()
+			slog.Debug("writing to fifo finished")
+		}
+		slog.Debug("setting up fifo events")
+		config.Timer.OnQuit.Append(func(*timer.Timer) {
+			slog.Debug("removing fifo", "path", config.Fifo)
+			os.Remove(config.Fifo)
+		})
+		config.Timer.OnChange.Append(writeToFile)
+		config.Timer.OnModeEnd.Append(writeToFile)
+		config.Timer.OnModeStart.Append(writeToFile)
 	}
-	if viper.GetBool("activitywatch") {
+	if config.Activitywatch {
 		aw := activitywatch.Watcher{}
 		aw.Init()
 		aw.AddEventWatchers(&config.Timer)
 	}
-	config.Timer.Duration = [...]time.Duration{
-		viper.GetDuration("pomodoro-duration"),
-		viper.GetDuration("short-break-duration"),
-		viper.GetDuration("long-break-duration"),
-	}
-	config.Timer.Paused = viper.GetBool("paused")
 
 	t.Config = &config.Timer
 
-	if address := viper.GetString("tcp-address"); address != "" {
+	if config.TcpAddress != "" {
 		tcp_daemon := tcpd.Daemon{
 			Timer: t,
 		}
-		if err := tcp_daemon.InitializeListener(address); err != nil {
+		if err := tcp_daemon.InitializeListener(config.TcpAddress); err != nil {
 			return err
 		}
 		go tcp_daemon.Run()
 	}
-	if address := viper.GetString("http-address"); address != "" {
+	if config.HttpAddress != "" {
 		config.http_deamon = &httpd.Daemon{
 			Timer:   t,
 			Clients: &sync.Map{},
@@ -237,11 +260,11 @@ func runDaemons(t *timer.Timer) (errout error) {
 		config.http_deamon.SetupEndStartEvents()
 		config.http_deamon.Init()
 		config.http_deamon.JsonRoutes()
-		if !viper.GetBool("no-webgui") {
-			go runWebgui(address)
+		if !config.NoWebgui {
+			go runWebgui(config.HttpAddress)
 		}
 		go func() {
-			errout = config.http_deamon.Run(address)
+			errout = config.http_deamon.Run(config.HttpAddress)
 		}()
 	}
 	t.Init()
@@ -250,8 +273,8 @@ func runDaemons(t *timer.Timer) (errout error) {
 }
 
 func runWebgui(address string) {
-	config.http_deamon.WebguiRoutes(viper.GetString("custom-css"))
-	if !viper.GetBool("no-open-browser") {
+	config.http_deamon.WebguiRoutes(config.CustomCss)
+	if !config.NoOpenBrowser {
 		if strings.HasPrefix(address, "http://") {
 			utils.OpenURL(address)
 		} else {

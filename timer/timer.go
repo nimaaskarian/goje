@@ -24,7 +24,7 @@ type Timer struct {
 
 func (t *Timer) Reset() {
 	t.SeekTo(t.Config.Duration[t.Mode])
-	t.Config.OnModeStart.Run(t)
+	go t.Config.OnModeStart.Run(t)
 }
 
 func (t *Timer) Init() {
@@ -36,22 +36,22 @@ func (t *Timer) Init() {
 	if t.Paused {
 		t.Config.OnPause.AppendOnce(func(t *Timer) {
 			if !t.Paused {
-				t.Config.OnModeStart.Run(t)
+				go t.Config.OnModeStart.Run(t)
 			}
 		})
 	} else {
-		t.Config.OnModeStart.Run(t)
+		go t.Config.OnModeStart.Run(t)
 	}
 }
 
 func (t *Timer) Pause() {
 	t.Paused = !t.Paused
-	t.Config.OnPause.Run(t)
+	go t.Config.OnPause.Run(t)
 }
 
 func (t *Timer) SeekTo(duration time.Duration) {
 	t.Duration = duration
-	t.Config.OnChange.Run(t)
+	go t.Config.OnChange.Run(t)
 }
 
 func (t *Timer) SeekAdd(duration time.Duration) {
@@ -65,7 +65,7 @@ func (t *Timer) SeekAdd(duration time.Duration) {
 
 func (t *Timer) tick() {
 	if t.Duration <= 0 {
-		t.Config.OnModeEnd.Run(t)
+		go t.Config.OnModeEnd.Run(t)
 		t.SwitchNextMode()
 	}
 	time.Sleep(t.Config.DurationPerTick)

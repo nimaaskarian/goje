@@ -5,15 +5,15 @@ import (
 )
 
 type TimerConfig struct {
-	Sessions        uint
-	Duration        [MODE_MAX]time.Duration
-	OnModeEnd       TimerConfigEvent `json:"-"`
-	OnModeStart     TimerConfigEvent `json:"-"`
-	OnChange        TimerConfigEvent `json:"-"`
-	OnPause         TimerConfigEvent `json:"-"`
-	OnQuit          TimerConfigEvent `json:"-"`
-	Paused          bool
-	DurationPerTick time.Duration `mapstructure:"duration-per-tick"`
+	Sessions        uint                    `mapstructure:"sessions"`
+	Duration        [MODE_MAX]time.Duration `mapstructure:"duration"`
+	OnModeEnd       TimerConfigEvent        `json:"-"`
+	OnModeStart     TimerConfigEvent        `json:"-"`
+	OnChange        TimerConfigEvent        `json:"-"`
+	OnPause         TimerConfigEvent        `json:"-"`
+	OnQuit          TimerConfigEvent        `json:"-"`
+	Paused          bool                    `mapstructure:"paused"`
+	DurationPerTick time.Duration           `mapstructure:"duration-per-tick"`
 }
 
 var DefaultConfig = TimerConfig{

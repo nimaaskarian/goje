@@ -4,13 +4,16 @@ WEBGUI_DEPS = $(wildcard httpd/webgui-preact/src/* httpd/webgui-preact/public/* 
 TW = httpd/webgui-preact/node_modules/tailwindcss httpd/webgui-preact/node_modules/@tailwindcss/vite
 ANDROID_NDK_HOME:=/opt/android-sdk/ndk/27.0.12077973
 
-all: coverage.out goje_linux_amd64
+all: TODO.md coverage.out goje_linux_amd64
 
 coverage.out: $(WEBGUI) $(SRC)
 	go test ./... -coverprofile=coverage.out
 
 goje_linux_amd64: ${WEBGUI} $(SRC)
 	go build -o $@
+
+TODO.md: tasks.yaml
+	ydo md > TODO.md
 
 goje_windows_amd64.exe: ${WEBGUI} $(SRC)
 	GOOS=windows go build -o $@
