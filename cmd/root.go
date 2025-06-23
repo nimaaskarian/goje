@@ -110,7 +110,6 @@ var rootCmd = &cobra.Command{
 			syscall.SIGINT,
 			syscall.SIGTERM,
 			syscall.SIGQUIT,
-      syscall.SIGHUP,
 		)
 		t := timer.Timer{}
 		go func() {
@@ -124,7 +123,7 @@ var rootCmd = &cobra.Command{
 			return err
 		}
 		sig := make(chan os.Signal, 1)
-		signal.Notify(sig, syscall.SIGUSR2)
+		signal.Notify(sig, syscall.SIGHUP)
 		for {
 			<-sig
       if err := setupConfigForCmd(cmd); err != nil {
