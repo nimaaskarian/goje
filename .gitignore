@@ -12,3 +12,5 @@ tmp/
 goje_android_arm64
 goje_linux_amd64
 goje_windows_amd64.exe
+*.bz2
+*.zip
