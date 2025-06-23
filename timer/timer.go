@@ -65,7 +65,10 @@ func (t *Timer) SeekAdd(duration time.Duration) {
 
 func (t *Timer) tick() {
 	if t.Duration <= 0 {
-		go t.Config.OnModeEnd.Run(t)
+    // timer before executing OnModeRun, so SwitchNextMode wouldn't
+    // change the timer reference during the call.
+    t_copy := *t
+		go t.Config.OnModeEnd.Run(&t_copy)
 		t.SwitchNextMode()
 	}
 	time.Sleep(t.Config.DurationPerTick)
