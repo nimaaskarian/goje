@@ -204,26 +204,6 @@ func readConfig(cmd *cobra.Command) error {
 }
 
 func runDaemons(t *timer.Timer) (errout error) {
-	if config.ExecStart != "" {
-		config.Timer.OnModeStart.Append(func(t *timer.Timer) {
-			content, _ := json.Marshal(t)
-			if err := exec.Command(config.ExecStart, string(content)).Run(); err != nil {
-				errout = err
-			}
-		})
-	}
-	if config.ExecEnd != "" {
-		config.Timer.OnModeEnd.Append(func(t *timer.Timer) {
-			content, _ := json.Marshal(t)
-			exec.Command(config.ExecEnd, string(content)).Run()
-		})
-	}
-	if config.ExecPause != "" {
-		config.Timer.OnPause.Append(func(t *timer.Timer) {
-			content, _ := json.Marshal(t)
-			exec.Command(config.ExecPause, string(content)).Run()
-		})
-	}
 	if config.Fifo != "" {
 		utils.Mkfifo(config.Fifo)
 		writeToFile := func(t *timer.Timer) {
@@ -252,6 +232,21 @@ func runDaemons(t *timer.Timer) (errout error) {
 
 	t.Config = &config.Timer
 
+	if config.ExecStart != "" {
+		config.Timer.OnModeStart.Append(func(t *timer.Timer) {
+      runCommand(t, config.ExecStart, &errout)
+		})
+	}
+	if config.ExecEnd != "" {
+		config.Timer.OnModeEnd.Append(func(t *timer.Timer) {
+      runCommand(t, config.ExecEnd, &errout)
+		})
+	}
+	if config.ExecPause != "" {
+		config.Timer.OnPause.Append(func(t *timer.Timer) {
+      runCommand(t, config.ExecPause, &errout)
+		})
+	}
 	if config.TcpAddress != "" {
 		tcp_daemon := tcpd.Daemon{
 			Timer: t,
@@ -298,6 +293,15 @@ func runWebgui(address string) {
 			}
 		}
 	}
+}
+
+func runCommand(t *timer.Timer, cmd string, errout *error) {
+  content, _ := json.Marshal(t)
+  go func() {
+    if err := exec.Command(cmd, string(content)).Run(); err != nil {
+      *errout = err
+    }
+  }()
 }
 
 func Execute() {
