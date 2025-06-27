@@ -42,9 +42,10 @@ func (e *TimerConfigEvent) AppendOnce(handler func(*Timer)) {
 	e.OnEventOnce = append(e.OnEventOnce, handler)
 }
 
+// this is non-blocking. it iterates through all the events and goroutines them.
 func (e *TimerConfigEvent) Run(t *Timer) {
 	for _, handler := range append(e.OnEvent, e.OnEventOnce...) {
-		handler(t)
+		go handler(t)
 	}
 	e.OnEventOnce = nil
 }

@@ -24,7 +24,7 @@ type Timer struct {
 
 func (t *Timer) Reset() {
 	t.SeekTo(t.Config.Duration[t.Mode])
-	go t.Config.OnModeStart.Run(t)
+	t.Config.OnModeStart.Run(t)
 }
 
 func (t *Timer) Init() {
@@ -36,22 +36,22 @@ func (t *Timer) Init() {
 	if t.Paused {
 		t.Config.OnPause.AppendOnce(func(t *Timer) {
 			if !t.Paused {
-				go t.Config.OnModeStart.Run(t)
+				t.Config.OnModeStart.Run(t)
 			}
 		})
 	} else {
-		go t.Config.OnModeStart.Run(t)
+		t.Config.OnModeStart.Run(t)
 	}
 }
 
 func (t *Timer) Pause() {
 	t.Paused = !t.Paused
-	go t.Config.OnPause.Run(t)
+	t.Config.OnPause.Run(t)
 }
 
 func (t *Timer) SeekTo(duration time.Duration) {
 	t.Duration = duration
-	go t.Config.OnChange.Run(t)
+	t.Config.OnChange.Run(t)
 }
 
 func (t *Timer) SeekAdd(duration time.Duration) {
@@ -68,7 +68,7 @@ func (t *Timer) tick() {
     // timer before executing OnModeRun, so SwitchNextMode wouldn't
     // change the timer reference during the call.
     t_copy := *t
-		go t.Config.OnModeEnd.Run(&t_copy)
+		t.Config.OnModeEnd.Run(&t_copy)
 		t.SwitchNextMode()
 	}
 	time.Sleep(t.Config.DurationPerTick)
@@ -76,7 +76,7 @@ func (t *Timer) tick() {
 		return
 	}
 	t.Duration -= t.Config.DurationPerTick
-	go t.Config.OnChange.Run(t)
+	t.Config.OnChange.Run(t)
 }
 
 // Halts the current thread for ever. Use in a go routine.
