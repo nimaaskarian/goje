@@ -23,7 +23,7 @@ func (d *Watcher) Init() {
 			Hostname: "127.0.0.1",
 			Port:     "5600",
 		},
-		ClientName: "goje-pomodoro-watcher",
+		ClientName: "aw-watcher-goje",
 	}
 	d.client.Init()
 	d.bucket_id = "aw-watcher-goje_" + d.client.ClientHostname
