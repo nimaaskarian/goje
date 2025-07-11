@@ -39,7 +39,7 @@ func (d *Daemon) JsonRoutes() {
 			if prev_mode != d.Timer.Mode {
 				d.Timer.Reset()
 			}
-			d.UpdateClients(timer.OnChangeEvent(d.Timer))
+			d.Timer.Config.OnChange.Run(d.Timer)
 			c.JSON(http.StatusOK, d.Timer)
 		}
 	})
