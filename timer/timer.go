@@ -32,7 +32,7 @@ func (t *Timer) Init() {
 	t.FinishedSessions = 0
 	t.Paused = t.Config.Paused
 	t.SeekTo(t.Config.Duration[t.Mode])
-  t.Config.OnChange.Run(t);
+	t.Config.OnChange.Run(t)
 	if t.Paused {
 		t.Config.OnPause.AppendOnce(func(t *Timer) {
 			if !t.Paused {
@@ -65,9 +65,9 @@ func (t *Timer) SeekAdd(duration time.Duration) {
 
 func (t *Timer) tick() {
 	if t.Duration <= 0 {
-    // timer before executing OnModeRun, so SwitchNextMode wouldn't
-    // change the timer reference during the call.
-    t_copy := *t
+		// timer before executing OnModeRun, so SwitchNextMode wouldn't
+		// change the timer reference during the call.
+		t_copy := *t
 		t.Config.OnModeEnd.Run(&t_copy)
 		t.SwitchNextMode()
 	}

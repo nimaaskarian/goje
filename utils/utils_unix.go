@@ -29,5 +29,5 @@ func ConfigDir() string {
 }
 
 func Mkfifo(path string) {
-  syscall.Mkfifo(path, 0644)
+	syscall.Mkfifo(path, 0644)
 }
