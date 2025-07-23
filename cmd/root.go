@@ -19,6 +19,7 @@ import (
 	"github.com/nimaaskarian/goje/timer"
 	"github.com/nimaaskarian/goje/utils"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -61,39 +62,35 @@ func (level *LogLevel) Set(v string) error {
 var config = AppConfig{Timer: timer.DefaultConfig}
 var loglevel LogLevel
 
+func rootFlags() *pflag.FlagSet {
+	flagset := pflag.NewFlagSet("roots", pflag.ExitOnError)
+	flagset.DurationSliceP("duration", "D", timer.DefaultConfig.Duration[:], "duration of timer as pomodoro,short break,long break")
+	flagset.BoolP("not-paused", "P", false, "timer is not paused by default")
+	flagset.UintP("sessions", "s", timer.DefaultConfig.Sessions, "count of sessions in timer")
+	flagset.BoolP("paused", "p", false, "timer is paused by default")
+	flagset.DurationP("duration-per-tick", "d", time.Second, "duration per each tick, that determines the accuracy of timer")
+	flagset.String("custom-css", "", "a custom css file to load on the website")
+	flagset.String("exec-start", "", "command to run when any timer mode starts (run's the script with json of timer as the first arguemnt)")
+	flagset.String("exec-end", "", "command to run when any timer mode ends (run's the script with json of timer as the first arguemnt)")
+	flagset.String("exec-pause", "", "command to run when timer (un)pauses")
+	flagset.StringP("tcp-address", "a", "localhost:7800", "address:[port] for tcp pomodoro daemon (doesn't run when empty)")
+	flagset.StringP("http-address", "A", "localhost:7900", "address:[port] for http pomodoro api (doesn't run when empty)")
+	flagset.Bool("no-webgui", false, "don't run webgui. webgui can't be run without the json server")
+	flagset.Bool("no-open-browser", false, "don't open the browser when running webgui")
+	flagset.BoolP("activitywatch", "", false, "daemon send's pomodoro data to activitywatch if is present")
+	flagset.StringP("fifo", "f", "", "write timer events in a fifo at given path")
+	return flagset
+}
+
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&config_file, "config", "c", "", "path to config file. uses default if not specified")
-	rootCmd.Flags().DurationSliceP("duration", "D", timer.DefaultConfig.Duration[:], "duration of timer as pomodoro,short break,long break")
-	rootCmd.Flags().BoolP("not-paused", "P", false, "timer is not paused by default")
-	rootCmd.Flags().UintP("sessions", "s", timer.DefaultConfig.Sessions, "count of sessions in timer")
-	rootCmd.Flags().BoolP("paused", "p", false, "timer is paused by default")
+	rootCmd.Flags().AddFlagSet(rootFlags())
 	rootCmd.MarkFlagsMutuallyExclusive("paused", "not-paused")
-	rootCmd.Flags().DurationP("duration-per-tick", "d", time.Second, "duration per each tick, that determines the accuracy of timer")
+
+	rootCmd.PersistentFlags().StringVarP(&config_file, "config", "c", "", "path to config file. uses default if not specified")
 	rootCmd.PersistentFlags().String("loglevel", "error", "log level of goje")
 	rootCmd.RegisterFlagCompletionFunc("loglevel", func(cmd *cobra.Command, args []string, to_complete string) ([]cobra.Completion, cobra.ShellCompDirective) {
 		return []string{"error", "warn", "debug", "info"}, cobra.ShellCompDirectiveNoFileComp
 	})
-	rootCmd.Flags().String("custom-css", "", "a custom css file to load on the website")
-	rootCmd.Flags().String("exec-start", "", "command to run when any timer mode starts (run's the script with json of timer as the first arguemnt)")
-	rootCmd.Flags().String("exec-end", "", "command to run when any timer mode ends (run's the script with json of timer as the first arguemnt)")
-	rootCmd.Flags().String("exec-pause", "", "command to run when timer (un)pauses")
-	rootCmd.Flags().StringP("tcp-address", "a", "localhost:7800", "address:[port] for tcp pomodoro daemon (doesn't run when empty)")
-	rootCmd.Flags().StringP("http-address", "A", "localhost:7900", "address:[port] for http pomodoro api (doesn't run when empty)")
-	rootCmd.Flags().Bool("no-webgui", false, "don't run webgui. webgui can't be run without the json server")
-	rootCmd.Flags().Bool("no-open-browser", false, "don't open the browser when running webgui")
-	rootCmd.Flags().BoolP("activitywatch", "", false, "daemon send's pomodoro data to activitywatch if is present")
-	rootCmd.Flags().StringP("fifo", "f", "", "write timer events in a fifo at given path")
-}
-
-type SigEvent struct {
-	name string
-}
-
-func (e SigEvent) Payload() any {
-	return nil
-}
-func (e SigEvent) Name() string {
-	return e.name
 }
 
 var rootCmd = &cobra.Command{
@@ -105,33 +102,41 @@ var rootCmd = &cobra.Command{
 		return setupConfigForCmd(cmd)
 	},
 	RunE: func(cmd *cobra.Command, args []string) (errout error) {
-		sigc := make(chan os.Signal, 1)
-		signal.Notify(sigc,
-			syscall.SIGINT,
-			syscall.SIGTERM,
-			syscall.SIGQUIT,
-		)
 		t := timer.Timer{}
-		go func() {
-			sig := <-sigc
-			slog.Debug("caught deadly signal", "signal", sig)
-			t.Config.OnQuit.Run(&t)
-			slog.Debug("clean up finished. quitting")
-			os.Exit(1)
-		}()
-		if err := runDaemons(&t); err != nil {
+		if err := setupDaemons(&t); err != nil {
 			return err
 		}
-		sig := make(chan os.Signal, 1)
-		signal.Notify(sig, syscall.SIGHUP)
-		for {
-			<-sig
-			if err := setupConfigForCmd(cmd); err != nil {
-				errout = err
-			}
-			config.http_deamon.BroadcastToSSEClients(httpd.NewEvent(nil, "restart"))
-		}
+		t.Init()
+		go t.Loop()
+		return listenForSignalsForCmdAndTimer(cmd, &t)
 	},
+}
+
+func listenForSignalsForCmdAndTimer(cmd *cobra.Command, t *timer.Timer) (errout error) {
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+	)
+	go func() {
+		sig := <-sigc
+		slog.Debug("caught deadly signal", "signal", sig)
+		t.Config.OnQuit.Run(t)
+		slog.Debug("clean up finished. quitting")
+		os.Exit(1)
+	}()
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGHUP)
+	for {
+		<-sig
+		if err := setupConfigForCmd(cmd); err != nil {
+			errout = err
+		}
+		if config.http_deamon != nil {
+			config.http_deamon.BroadcastToSSEClients(httpd.Event{ Name: "restart" })
+		}
+	}
 }
 
 func setupConfigForCmd(cmd *cobra.Command) (errout error) {
@@ -200,7 +205,7 @@ func readConfig(cmd *cobra.Command) error {
 	return nil
 }
 
-func runDaemons(t *timer.Timer) (errout error) {
+func setupDaemons(t *timer.Timer) (errout error) {
 	if config.Fifo != "" {
 		utils.Mkfifo(config.Fifo)
 		writeToFile := func(t *timer.Timer) {
@@ -270,8 +275,6 @@ func runDaemons(t *timer.Timer) (errout error) {
 			errout = config.http_deamon.Run(config.HttpAddress)
 		}()
 	}
-	t.Init()
-	go t.Loop()
 	return nil
 }
 

@@ -10,6 +10,9 @@ type TimerConfig struct {
 	OnModeEnd       TimerConfigEvent        `json:"-"`
 	OnModeStart     TimerConfigEvent        `json:"-"`
 	OnChange        TimerConfigEvent        `json:"-"`
+	// event for clients of an outbound server, to push sets to server. all change
+	// events should run this first, if failed then run other events
+	OnSet           TimerConfigEvent        `json:"-"`
 	OnPause         TimerConfigEvent        `json:"-"`
 	OnQuit          TimerConfigEvent        `json:"-"`
 	Paused          bool                    `mapstructure:"paused"`
@@ -43,9 +46,11 @@ func (e *TimerConfigEvent) AppendOnce(handler func(*Timer)) {
 }
 
 // this is non-blocking. it iterates through all the events and goroutines them.
-func (e *TimerConfigEvent) Run(t *Timer) {
+func (e *TimerConfigEvent) Run(t *Timer) (ran bool) {
 	for _, handler := range append(e.OnEvent, e.OnEventOnce...) {
 		go handler(t)
+		ran = true
 	}
 	e.OnEventOnce = nil
+	return ran
 }

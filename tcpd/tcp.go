@@ -82,7 +82,7 @@ command: %s
 command: %s
 `, Pause, Seek, Reset, Init, Prev, Next, Skip, Sessions, Timer, ConfigSessions, Commands), nil
 	default:
-		out, err = "", errors.New(fmt.Sprintf("command not found %q", splited[0]))
+		out, err = "", fmt.Errorf("command not found %q", splited[0])
 		cmd = ""
 	}
 	return cmd, out, err
@@ -97,7 +97,8 @@ func pauseCmd(timer *timer.Timer, args []string) (string, error) {
 		timer.Paused, err = parseBool(args[1])
 		if err != nil {
 			return "", err
-		} else {
+		}
+		if !timer.Config.OnSet.Run(timer) {
 			timer.Config.OnPause.Run(timer)
 		}
 	default:
@@ -112,7 +113,8 @@ func sessionsCmd(timer *timer.Timer, args []string) (string, error) {
 		err := parseRelativeNumber(args[1], &timer.FinishedSessions)
 		if err != nil {
 			return "", err
-		} else {
+		} 
+		if !timer.Config.OnSet.Run(timer) {
 			timer.Config.OnChange.Run(timer)
 		}
 	default:
@@ -127,7 +129,8 @@ func configSessionsCmd(timer *timer.Timer, args []string) (string, error) {
 		err := parseRelativeNumber(args[1], &timer.Config.Sessions)
 		if err != nil {
 			return "", err
-		} else {
+		}
+		if !timer.Config.OnSet.Run(timer) {
 			timer.Config.OnChange.Run(timer)
 		}
 	default:
@@ -232,7 +235,7 @@ func timerCmd(timer *timer.Timer, args []string) (string, error) {
 		if field.IsValid() {
 			return fmt.Sprintln(field.Interface()), nil
 		} else {
-			return "", errors.New(fmt.Sprintf("field doesn't exist on timer: %q", name))
+			return "", fmt.Errorf("field doesn't exist on timer: %q", name)
 		}
 	default:
 		return "", TooManyArgsError{args[0]}

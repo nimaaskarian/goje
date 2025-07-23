@@ -3,4 +3,4 @@
 - [ ] arch-wiki: add to arch wiki
 - [ ] aur: add to aur
 - [ ] reseting: add reseting and context
-- [ ] outbound: add client outbound subscription
+- [x] outbound: add client outbound subscription(0s ago)
