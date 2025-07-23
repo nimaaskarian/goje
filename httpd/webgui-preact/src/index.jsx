@@ -17,13 +17,12 @@ export function App() {
   const [notificationEnabled, setNotificationEnabled] = useState(false);
   const sse = useMemo(() => {
     setNotificationEnabled(localStorage.getItem('notification') === "true");
-    const sse = new EventSource("/api/timer/stream")
-    sse.addEventListener("change", (e) => {
-      setTimer(JSON.parse(e.data))
-    })
-    sse.addEventListener("pause", (e) => {
-      setTimer(JSON.parse(e.data))
-    })
+    const sse = new EventSource("/api/timer/stream");
+    ["pause", "change", "start", "end"].forEach(event => {
+      sse.addEventListener(event, (e) => {
+        setTimer(JSON.parse(e.data))
+      })
+    });
     sse.addEventListener("restart", () => {
       window.location.reload()
     })

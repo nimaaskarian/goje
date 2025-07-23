@@ -75,4 +75,8 @@ func (d *Daemon) WebguiRoutes(custom_css_file string) {
 	d.router.GET("/", func(c *gin.Context) {
 		c.Data(http.StatusOK, "text/html;  charset=utf-8", data)
 	})
+	favicon, _ := embed_fs.ReadFile("webgui-preact/dist/favicon.ico")
+	d.router.GET("/favicon.ico", func(c *gin.Context) {
+		c.Data(http.StatusOK, "image/x-icon", favicon)
+	})
 }

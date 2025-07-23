@@ -49,7 +49,7 @@ func (d *Daemon) Init() {
 	gin.SetMode(gin.ReleaseMode)
 	d.router = gin.Default()
 	d.router.Use(func(c *gin.Context) {
-		if strings.HasPrefix(c.Request.URL.Path, "/assets") {
+		if !strings.HasPrefix(c.Request.URL.Path, "/api") {
 			c.Writer.Header().Set("Cache-Control", "public, max-age=31536000")
 		}
 	}, gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{"/api"})))

@@ -7,4 +7,5 @@ export default defineConfig({
     preact(),
     tailwindcss(),
   ],
+  esbuild: { legalComments: 'none' },
 });
