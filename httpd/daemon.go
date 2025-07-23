@@ -17,28 +17,22 @@ type Daemon struct {
 	Clients    *sync.Map
 }
 
-func (d *Daemon) UpdateAllChangeEvent(t *timer.Timer) {
-	d.UpdateClients(timer.OnChangeEvent(t))
-}
-
-func (d *Daemon) SetupEndStartEvents() {
+func (d *Daemon) SetupEvents() {
+	d.Timer.Config.OnChange.Append(func (t *timer.Timer) {
+		d.BroadcastToSSEClients(ChangeEvent(t))
+	})
 	d.Timer.Config.OnModeStart.Append(func(t *timer.Timer) {
-		d.UpdateClients(timer.OnModeStartEvent(t))
+		d.BroadcastToSSEClients(NewEvent(t, "start"))
 	})
 	d.Timer.Config.OnModeEnd.Append(func(t *timer.Timer) {
-		d.UpdateClients(timer.OnChangeEvent(t))
+		d.BroadcastToSSEClients(NewEvent(t, "end"))
 	})
 	d.Timer.Config.OnPause.Append(func(t *timer.Timer) {
-		d.UpdateClients(timer.OnPauseEvent(t))
+		d.BroadcastToSSEClients(NewEvent(t, "pause"))
 	})
 }
 
-type Event interface {
-	Payload() any
-	Name() string
-}
-
-func (d *Daemon) UpdateClients(e Event) {
+func (d *Daemon) BroadcastToSSEClients(e Event) {
 	d.Clients.Range(func(id any, value any) (closed bool) {
 		client := value.(chan Event)
 		defer func() {

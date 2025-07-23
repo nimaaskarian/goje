@@ -129,9 +129,7 @@ var rootCmd = &cobra.Command{
 			if err := setupConfigForCmd(cmd); err != nil {
 				errout = err
 			}
-			config.http_deamon.UpdateClients(SigEvent{
-				name: "restart",
-			})
+			config.http_deamon.BroadcastToSSEClients(httpd.NewEvent(nil, "restart"))
 		}
 	},
 }
@@ -261,9 +259,8 @@ func runDaemons(t *timer.Timer) (errout error) {
 			Timer:   t,
 			Clients: &sync.Map{},
 		}
-		config.Timer.OnChange.Append(config.http_deamon.UpdateAllChangeEvent)
-		config.http_deamon.SetupEndStartEvents()
 		config.http_deamon.Init()
+		config.http_deamon.SetupEvents()
 		config.http_deamon.JsonRoutes()
 		if !config.NoWebgui {
 			go runWebgui(config.HttpAddress)

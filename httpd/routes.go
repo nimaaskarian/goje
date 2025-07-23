@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/nimaaskarian/goje/timer"
 )
 
 //go:embed webgui-preact/dist/*
@@ -48,7 +47,7 @@ func (d *Daemon) JsonRoutes() {
 		c.Header("Connection", "keep-alive")
 		c.Header("Transfer-Encoding", "chunked")
 		client := make(chan Event, 1)
-		client <- timer.OnChangeEvent(d.Timer)
+		client <- ChangeEvent(d.Timer)
 		d.lastId++
 		id := d.lastId
 		d.Clients.Store(id, client)
@@ -58,7 +57,7 @@ func (d *Daemon) JsonRoutes() {
 		}()
 		c.Stream(func(w io.Writer) bool {
 			if event, ok := <-client; ok {
-				c.SSEvent(event.Name(), event.Payload())
+				c.SSEvent(event.Name, event.Payload)
 				return true
 			}
 			return false
