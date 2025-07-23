@@ -16,7 +16,9 @@ mutex:
     done-at: 2025-06-02T08:10:53.201578219+03:30
 outbound:
     task: add client outbound subscription
+    done: true
     created-at: 2025-07-23T21:00:52.262444019+03:30
+    done-at: 2025-07-23T21:15:42.237270371+03:30
 reseting:
     task: add reseting and context
     created-at: 2025-06-16T08:22:53.102578975+03:30
