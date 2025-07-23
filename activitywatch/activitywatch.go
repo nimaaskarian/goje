@@ -31,7 +31,7 @@ func (d *Watcher) Init() {
 }
 
 func (d *Watcher) pushCurrentModeNow(t *timer.Timer) {
-  d.pushCurrentMode(t, time.Now())
+	d.pushCurrentMode(t, time.Now())
 }
 
 func (d *Watcher) pushCurrentMode(t *timer.Timer, now time.Time) {

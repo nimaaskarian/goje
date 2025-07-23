@@ -15,16 +15,17 @@ import (
 )
 
 const (
-	Pause    = "pause"
-	Seek     = "seek"
-	Reset    = "reset"
-	Next     = "next"
-	Prev     = "prev"
-	Skip     = "skip"
-	Init     = "init"
-	Sessions = "sessions"
-	Timer    = "timer"
-	Commands = "commands"
+	Pause          = "pause"
+	Seek           = "seek"
+	Reset          = "reset"
+	Next           = "next"
+	Prev           = "prev"
+	Skip           = "skip"
+	Init           = "init"
+	Sessions       = "sessions"
+	ConfigSessions = "config-sessions"
+	Timer          = "timer"
+	Commands       = "commands"
 )
 
 type TooManyArgsError struct {
@@ -65,6 +66,8 @@ func ParseInput(timer *timer.Timer, input string) (string, string, error) {
 		out, err = nextModeCmd(timer, splited)
 	case Sessions:
 		out, err = sessionsCmd(timer, splited)
+	case ConfigSessions:
+		out, err = configSessionsCmd(timer, splited)
 	case Commands:
 		out, err = fmt.Sprintf(`command: %s
 command: %s
@@ -76,7 +79,8 @@ command: %s
 command: %s
 command: %s
 command: %s
-`, Pause, Seek, Reset, Init, Prev, Next, Skip, Sessions, Timer, Commands), nil
+command: %s
+`, Pause, Seek, Reset, Init, Prev, Next, Skip, Sessions, Timer, ConfigSessions, Commands), nil
 	default:
 		out, err = "", errors.New(fmt.Sprintf("command not found %q", splited[0]))
 		cmd = ""
@@ -105,24 +109,7 @@ func pauseCmd(timer *timer.Timer, args []string) (string, error) {
 func sessionsCmd(timer *timer.Timer, args []string) (string, error) {
 	switch len(args) {
 	case 2:
-		var err error
-		if strings.HasPrefix(args[1], "+") || strings.HasPrefix(args[1], "-") {
-			var count uint64
-			count, err = strconv.ParseUint(args[1][1:], 10, 32)
-			if err == nil {
-				if args[1][0] == '+' {
-					timer.FinishedSessions += uint(count)
-				} else {
-					timer.FinishedSessions -= uint(count)
-				}
-			}
-		} else {
-			var count uint64
-			count, err = strconv.ParseUint(args[1], 10, 32)
-			if err == nil {
-				timer.FinishedSessions = uint(count)
-			}
-		}
+		err := parseRelativeNumber(args[1], &timer.FinishedSessions)
 		if err != nil {
 			return "", err
 		} else {
@@ -132,6 +119,44 @@ func sessionsCmd(timer *timer.Timer, args []string) (string, error) {
 		return "", WrongNumberOfArgsError{args[0]}
 	}
 	return "", nil
+}
+
+func configSessionsCmd(timer *timer.Timer, args []string) (string, error) {
+	switch len(args) {
+	case 2:
+		err := parseRelativeNumber(args[1], &timer.Config.Sessions)
+		if err != nil {
+			return "", err
+		} else {
+			timer.Config.OnChange.Run(timer)
+		}
+	default:
+		return "", WrongNumberOfArgsError{args[0]}
+	}
+	return "", nil
+}
+
+func parseRelativeNumber(input string, output *uint) (err error) {
+	if strings.HasPrefix(input, "+") || strings.HasPrefix(input, "-") {
+		var count uint64
+		count, err = strconv.ParseUint(input[1:], 10, 32)
+		if err != nil {
+			return err
+		}
+		if input[0] == '+' {
+			*output += uint(count)
+		} else {
+			*output -= uint(count)
+		}
+	} else {
+		var count uint64
+		count, err = strconv.ParseUint(input, 10, 32)
+		if err != nil {
+			return err
+		}
+		*output = uint(count)
+	}
+	return nil
 }
 
 func seekCmd(timer *timer.Timer, args []string) (string, error) {

@@ -24,24 +24,23 @@ type Timer struct {
 
 func (t *Timer) Reset() {
 	t.SeekTo(t.Config.Duration[t.Mode])
-	t.Config.OnModeStart.Run(t)
+	t.Config.OnChange.Run(t)
+	if t.Paused {
+		t.Config.OnPause.OnEventOnce = []func(*Timer){func(t *Timer) {
+			if !t.Paused {
+				t.Config.OnModeStart.Run(t)
+			}
+		}}
+	} else {
+		t.Config.OnModeStart.Run(t)
+	}
 }
 
 func (t *Timer) Init() {
 	t.Mode = Pomodoro
 	t.FinishedSessions = 0
 	t.Paused = t.Config.Paused
-	t.SeekTo(t.Config.Duration[t.Mode])
-  t.Config.OnChange.Run(t);
-	if t.Paused {
-		t.Config.OnPause.AppendOnce(func(t *Timer) {
-			if !t.Paused {
-				t.Config.OnModeStart.Run(t)
-			}
-		})
-	} else {
-		t.Config.OnModeStart.Run(t)
-	}
+	t.Reset()
 }
 
 func (t *Timer) Pause() {
@@ -65,9 +64,9 @@ func (t *Timer) SeekAdd(duration time.Duration) {
 
 func (t *Timer) tick() {
 	if t.Duration <= 0 {
-    // timer before executing OnModeRun, so SwitchNextMode wouldn't
-    // change the timer reference during the call.
-    t_copy := *t
+		// timer before executing OnModeRun, so SwitchNextMode wouldn't
+		// change the timer reference during the call.
+		t_copy := *t
 		t.Config.OnModeEnd.Run(&t_copy)
 		t.SwitchNextMode()
 	}

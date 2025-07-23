@@ -31,7 +31,7 @@ func TestWatcherDuration(t *testing.T) {
 		client:    client,
 		bucket_id: "aw-watcher-goje_" + client.ClientHostname,
 	}
-  watcher.Init()
+	watcher.Init()
 
 	watcher.AddEventWatchers(tomato.Config)
 	router := gin.Default()

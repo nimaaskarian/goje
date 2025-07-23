@@ -102,7 +102,7 @@ var rootCmd = &cobra.Command{
 	Long:         "goje is a pomodoro timer server with modern features, suitable for both everyday users and computer nerds",
 	SilenceUsage: true,
 	PreRunE: func(cmd *cobra.Command, args []string) (errout error) {
-    return setupConfigForCmd(cmd)
+		return setupConfigForCmd(cmd)
 	},
 	RunE: func(cmd *cobra.Command, args []string) (errout error) {
 		sigc := make(chan os.Signal, 1)
@@ -126,12 +126,10 @@ var rootCmd = &cobra.Command{
 		signal.Notify(sig, syscall.SIGHUP)
 		for {
 			<-sig
-      if err := setupConfigForCmd(cmd); err != nil {
-        errout = err
-      }
-			config.http_deamon.UpdateClients(SigEvent{
-				name: "restart",
-			})
+			if err := setupConfigForCmd(cmd); err != nil {
+				errout = err
+			}
+			config.http_deamon.BroadcastToSSEClients(httpd.NewEvent(nil, "restart"))
 		}
 	},
 }
@@ -149,7 +147,6 @@ func setupConfigForCmd(cmd *cobra.Command) (errout error) {
 	viper.WatchConfig()
 	return nil
 }
-
 
 func readConfig(cmd *cobra.Command) error {
 	if config_file != "" {
@@ -234,17 +231,17 @@ func runDaemons(t *timer.Timer) (errout error) {
 
 	if config.ExecStart != "" {
 		config.Timer.OnModeStart.Append(func(t *timer.Timer) {
-      runCommand(t, config.ExecStart, &errout)
+			runCommand(t, config.ExecStart, &errout)
 		})
 	}
 	if config.ExecEnd != "" {
 		config.Timer.OnModeEnd.Append(func(t *timer.Timer) {
-      runCommand(t, config.ExecEnd, &errout)
+			runCommand(t, config.ExecEnd, &errout)
 		})
 	}
 	if config.ExecPause != "" {
 		config.Timer.OnPause.Append(func(t *timer.Timer) {
-      runCommand(t, config.ExecPause, &errout)
+			runCommand(t, config.ExecPause, &errout)
 		})
 	}
 	if config.TcpAddress != "" {
@@ -254,7 +251,7 @@ func runDaemons(t *timer.Timer) (errout error) {
 		if err := tcp_daemon.InitializeListener(config.TcpAddress); err != nil {
 			return err
 		}
-    slog.Info("running tcp daemon", "address", config.TcpAddress)
+		slog.Info("running tcp daemon", "address", config.TcpAddress)
 		go tcp_daemon.Run()
 	}
 	if config.HttpAddress != "" {
@@ -262,14 +259,13 @@ func runDaemons(t *timer.Timer) (errout error) {
 			Timer:   t,
 			Clients: &sync.Map{},
 		}
-		config.Timer.OnChange.Append(config.http_deamon.UpdateAllChangeEvent)
-		config.http_deamon.SetupEndStartEvents()
 		config.http_deamon.Init()
+		config.http_deamon.SetupEvents()
 		config.http_deamon.JsonRoutes()
 		if !config.NoWebgui {
 			go runWebgui(config.HttpAddress)
 		}
-    slog.Info("running http daemon", "address", config.HttpAddress)
+		slog.Info("running http daemon", "address", config.HttpAddress)
 		go func() {
 			errout = config.http_deamon.Run(config.HttpAddress)
 		}()
@@ -280,7 +276,7 @@ func runDaemons(t *timer.Timer) (errout error) {
 }
 
 func runWebgui(address string) {
-  slog.Debug("setting up webgui routes")
+	slog.Debug("setting up webgui routes")
 	config.http_deamon.WebguiRoutes(config.CustomCss)
 	if !config.NoOpenBrowser {
 		if strings.HasPrefix(address, "http://") {
@@ -296,12 +292,12 @@ func runWebgui(address string) {
 }
 
 func runCommand(t *timer.Timer, cmd string, errout *error) {
-  content, _ := json.Marshal(t)
-  go func() {
-    if err := exec.Command(cmd, string(content)).Run(); err != nil {
-      *errout = err
-    }
-  }()
+	content, _ := json.Marshal(t)
+	go func() {
+		if err := exec.Command(cmd, string(content)).Run(); err != nil {
+			*errout = err
+		}
+	}()
 }
 
 func Execute() {
