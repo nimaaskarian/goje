@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gin-contrib/gzip"
 	"github.com/nimaaskarian/goje/timer"
 )
 
@@ -57,7 +58,7 @@ func (d *Daemon) Init() {
 		if strings.HasPrefix(c.Request.URL.Path, "/assets") {
 			c.Writer.Header().Set("Cache-Control", "public, max-age=31536000")
 		}
-	})
+	}, gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{"/api"})))
 }
 
 func (d *Daemon) Run(address string) error {
