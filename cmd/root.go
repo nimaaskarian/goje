@@ -38,7 +38,7 @@ type AppConfig struct {
 	TcpAddress    string        `mapstructure:"tcp-address"`
 	Fifo          string        `mapstructure:"fifo"`
 	Loglevel      string        `mapstructure:"loglevel"`
-	http_deamon   *httpd.Daemon `mapstructure:"-"`
+	http_daemon   *httpd.Daemon `mapstructure:"-"`
 }
 
 type LogLevel slog.Level
@@ -133,8 +133,8 @@ func listenForSignalsForCmdAndTimer(cmd *cobra.Command, t *timer.Timer) (errout 
 		if err := setupConfigForCmd(cmd); err != nil {
 			errout = err
 		}
-		if config.http_deamon != nil {
-			config.http_deamon.BroadcastToSSEClients(httpd.Event{ Name: "restart" })
+		if config.http_daemon != nil {
+			config.http_daemon.BroadcastToSSEClients(httpd.Event{ Name: "restart" })
 		}
 	}
 }
@@ -150,7 +150,7 @@ func setupConfigForCmd(cmd *cobra.Command) (errout error) {
 		}
 	})
 	viper.WatchConfig()
-	return nil
+	return
 }
 
 func readConfig(cmd *cobra.Command) error {
@@ -260,27 +260,25 @@ func setupDaemons(t *timer.Timer) (errout error) {
 		go tcp_daemon.Run()
 	}
 	if config.HttpAddress != "" {
-		config.http_deamon = &httpd.Daemon{
+		config.http_daemon = &httpd.Daemon{
 			Timer:   t,
 			Clients: &sync.Map{},
 		}
-		config.http_deamon.Init()
-		config.http_deamon.SetupEvents()
-		config.http_deamon.JsonRoutes()
+		config.http_daemon.Init()
+		config.http_daemon.SetupEvents()
+		config.http_daemon.JsonRoutes()
 		if !config.NoWebgui {
 			go runWebgui(config.HttpAddress)
 		}
 		slog.Info("running http daemon", "address", config.HttpAddress)
-		go func() {
-			errout = config.http_deamon.Run(config.HttpAddress)
-		}()
+		return config.http_daemon.Run(config.HttpAddress)
 	}
-	return nil
+	return
 }
 
 func runWebgui(address string) {
 	slog.Debug("setting up webgui routes")
-	config.http_deamon.WebguiRoutes(config.CustomCss)
+	config.http_daemon.WebguiRoutes(config.CustomCss)
 	if !config.NoOpenBrowser {
 		if strings.HasPrefix(address, "http://") {
 			utils.OpenURL(address)
