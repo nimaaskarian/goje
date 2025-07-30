@@ -48,7 +48,7 @@ var clientCmd = &cobra.Command{
 			resp.Body.Close()
 		})
 		go func() {
-			err := client.Subscribe("", func(msg *sse.Event) {
+			err := client.SubscribeRaw(func(msg *sse.Event) {
 				json.Unmarshal(msg.Data, &t)
 				switch string(msg.Event)  {
 					case "change":
