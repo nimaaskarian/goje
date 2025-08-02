@@ -1,6 +1,7 @@
 package timer
 
 import (
+	"log/slog"
 	"strings"
 	"time"
 )
@@ -86,6 +87,7 @@ func (t *Timer) tick() {
 
 // Halts the current thread for ever. Use in a go routine.
 func (t *Timer) Loop() {
+	slog.Info("timer loop started")
 	for {
 		t.tick()
 	}
