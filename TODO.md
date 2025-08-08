@@ -1,6 +1,6 @@
-- [x] mutex: add a mutex for deleting clients(1m 21d ago)
-- [x] config: add config in webgui option(1m 21d ago)
+- [x] mutex: add a mutex for deleting clients (2m 5d ago)
+- [x] config: add config in webgui option (2m 5d ago)
 - [ ] arch-wiki: add to arch wiki
 - [ ] aur: add to aur
 - [ ] reseting: add reseting and context
-- [x] outbound: add client outbound subscription(0s ago)
+- [x] outbound: add client outbound subscription (1w 6d ago)

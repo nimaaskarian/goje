@@ -15,6 +15,7 @@ export function App() {
   const [timer, setTimer] = useState(undefined)
   const [settingsEnabled, setSettingsEnabled] = useState(false)
   const [notificationEnabled, setNotificationEnabled] = useState(false);
+
   const sse = useMemo(() => {
     setNotificationEnabled(localStorage.getItem('notification') === "true");
     const sse = new EventSource("/api/timer/stream");
@@ -49,8 +50,8 @@ export function App() {
     }
     localStorage.setItem('notification', String(notificationEnabled));
     if (notificationEnabled) {
-      sse.addEventListener("start", notificationHandler),
-        sse.addEventListener("end", notificationHandler);
+      sse.addEventListener("start", notificationHandler);
+      sse.addEventListener("end", notificationHandler);
       return () => {
         ["start", "end"].forEach((item) => sse.removeEventListener(item, notificationHandler))
       }
@@ -66,7 +67,12 @@ export function App() {
         <div id="timer-wrapper" class="min-w-60 text-center dark:bg-zinc-800 bg-white rounded-lg p-4 flex gap-4 flex-col shadow-sm hover:shadow-md transition ease-in-out duration-150">
           <ModeSelection timer={timer} />
           <div id="timer-sessions-wrapper" class="flex flex-row justify-center gap-2">
-            <Button title="-1 finished sessions" onClick={() => { timer.FinishedSessions--; postTimer(timer); }}>
+            <Button title="-1 finished sessions" onClick={() => {
+              if (timer.FinishedSessions > 0) {
+                timer.FinishedSessions--;
+              }
+              postTimer(timer);
+            }}>
               {minus_icon}
             </Button>
             {timer.FinishedSessions}/{timer.Config.Sessions}

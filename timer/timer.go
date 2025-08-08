@@ -121,10 +121,14 @@ func (t *Timer) SwitchPrevMode() {
 			t.Mode = ShortBreak
 		}
 	case LongBreak:
-		t.FinishedSessions--
+		if t.FinishedSessions > 0 {
+			t.FinishedSessions--
+		}
 		t.Mode = Pomodoro
 	case ShortBreak:
-		t.FinishedSessions--
+		if t.FinishedSessions > 0 {
+			t.FinishedSessions--
+		}
 		t.Mode = Pomodoro
 	}
 	t.Reset()
