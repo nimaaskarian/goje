@@ -1,0 +1,23 @@
+[Unit]
+Description=goje pomodoro application
+
+[Service]
+User=%i
+Type=simple
+Restart=always
+RestartSec=5s
+ExecStart=BINDIR/goje --loglevel info
+
+# disallow writing to /usr, /bin, /sbin, ...
+ProtectSystem=yes
+
+# more paranoid security settings
+NoNewPrivileges=yes
+ProtectKernelTunables=yes
+ProtectControlGroups=yes
+ProtectKernelModules=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+
+[Install]
+WantedBy=multi-user.target

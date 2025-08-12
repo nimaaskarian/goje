@@ -161,9 +161,12 @@ func readConfig(cmd *cobra.Command) error {
 		}
 		viper.SetConfigFile(config_file)
 	} else {
+		slog.Info("using the default config path")
 		viper.SetConfigName("config")
 		viper.SetConfigType("toml")
-		viper.AddConfigPath(utils.ConfigDir())
+		dir := utils.ConfigDir()
+		viper.AddConfigPath(dir)
+		slog.Info("searching for config.toml in", "dir", dir)
 	}
 	if err := viper.ReadInConfig(); err != nil {
 		_, ok := err.(viper.ConfigFileNotFoundError)

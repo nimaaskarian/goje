@@ -3,17 +3,19 @@ WEBGUI = httpd/webgui-preact/dist
 WEBGUI_DEPS = $(wildcard httpd/webgui-preact/src/* httpd/webgui-preact/public/* httpd/webgui-preact/index.html)
 TW = httpd/webgui-preact/node_modules/tailwindcss httpd/webgui-preact/node_modules/@tailwindcss/vite
 ANDROID_NDK_HOME:=/opt/android-sdk/ndk/27.0.12077973
+SERVICE_FILE=${DESTDIR}${PREFIX}/lib/systemd/system/goje@.service
+BIN_DIR=${DESTDIR}${PREFIX}/bin
 
-all: TODO.md coverage.out goje_linux_amd64
+all: coverage.out goje
 
 coverage.out: $(WEBGUI) $(SRC)
 	go test ./... -coverprofile=coverage.out
 
-goje_linux_amd64: ${WEBGUI} $(SRC)
+goje: ${WEBGUI} $(SRC)
 	go build -o $@
 
-TODO.md: tasks.yaml
-	ydo md > TODO.md
+goje_linux_amd64: ${WEBGUI} $(SRC)
+	GOOS=linux go build -o $@
 
 goje_windows_amd64.exe: ${WEBGUI} $(SRC)
 	GOOS=windows go build -o $@
@@ -28,9 +30,12 @@ ${WEBGUI}: ${TW} $(WEBGUI_DEPS)
 ${TW}:
 	cd httpd/webgui-preact/; npm install tailwindcss @tailwindcss/vite
 
-install: all
-	mkdir -p ${DESTDIR}${PREFIX}/bin
-	cp -f dwm ${DESTDIR}${PREFIX}/bin
+${SERVICE_FILE}: goje@.service
+	sed 's+BINDIR+${BIN_DIR}+' goje@.service | tee ${SERVICE_FILE} > /dev/null
+
+install: all ${SERVICE_FILE}
+	mkdir -p ${BIN_DIR}
+	cp -f goje ${BIN_DIR}
 
 clean:
 	rm ${ALL}
