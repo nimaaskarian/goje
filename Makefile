@@ -1,3 +1,4 @@
+PREFIX:=/usr
 SRC = $(shell find -name "*.go" -type f)
 WEBGUI = httpd/webgui-preact/dist
 WEBGUI_DEPS = $(wildcard httpd/webgui-preact/src/* httpd/webgui-preact/public/* httpd/webgui-preact/index.html)
