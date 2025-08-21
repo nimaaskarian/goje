@@ -38,6 +38,8 @@ type AppConfig struct {
 	TcpAddress    string        `mapstructure:"tcp-address"`
 	Fifo          string        `mapstructure:"fifo"`
 	Loglevel      string        `mapstructure:"loglevel"`
+	Pemfile       string        `mapstructure:"pemfile"`
+	Keyfile       string        `mapstructure:"keyfile"`
 	httpDaemon   *httpd.Daemon `mapstructure:"-"`
 }
 
@@ -79,6 +81,8 @@ func rootFlags() *pflag.FlagSet {
 	flagset.Bool("no-open-browser", false, "don't open the browser when running webgui")
 	flagset.BoolP("activitywatch", "", false, "daemon send's pomodoro data to activitywatch if is present")
 	flagset.StringP("fifo", "f", "", "write timer events in a fifo at given path")
+	flagset.String("pemfile", "", "path to ssl certificate's pem file")
+	flagset.String("keyfile", "", "path to ssl certificate's key file")
 	return flagset
 }
 
@@ -275,7 +279,7 @@ func setupDaemons(t *timer.Timer) (errout error) {
 		}
 		slog.Info("running http daemon", "address", config.HttpAddress)
 		go func() {
-			errout = config.httpDaemon.Run(config.HttpAddress)
+			errout = config.httpDaemon.Run(config.HttpAddress, config.Pemfile, config.Keyfile)
 		}()
 	}
 	return

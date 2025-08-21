@@ -55,6 +55,9 @@ func (d *Daemon) Init() {
 	}, gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{"/api"})))
 }
 
-func (d *Daemon) Run(address string) error {
+func (d *Daemon) Run(address, pemfile, keyfile string) error {
+	if pemfile != "" && keyfile != "" {
+		return d.router.RunTLS(address, pemfile, keyfile)
+	}
 	return d.router.Run(address)
 }
