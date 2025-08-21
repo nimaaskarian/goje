@@ -1,16 +1,12 @@
 import { useEffect, useMemo, useState } from 'preact/hooks';
 import { Radio, Button, parseDuration, formatDuration } from "./utils"
 import { postTimer, timerModeString } from "./timer"
+import { sendNotification } from "./utils"
 
   function updateNotifications() {
     Notification.requestPermission((result) => {
       if (result === "granted") {
-        const n = new Notification("Goje", { body: "Notification enabled!" })
-        document.addEventListener("visibilitychange", () => {
-          if (document.visibilityState === "visible") {
-            n.close();
-          }
-        });
+        sendNotification("Notification enabled!")
       } else {
         setNotification(false);
       }

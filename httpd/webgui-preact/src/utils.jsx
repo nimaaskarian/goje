@@ -75,3 +75,17 @@ export function parseDuration(duration) {
   return nanoseconds
 }
 
+
+export function sendNotification(body) {
+  let notif = {
+      body, 
+      icon: window.location.origin+"/assets/goje-512x512.png",
+    }
+  console.log(notif)
+    const n = new Notification("Goje", notif)
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        n.close();
+      }
+    });
+}

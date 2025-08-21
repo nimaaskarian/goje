@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'preact/hooks';
 import { Settings } from "./settings"
 import { Button } from "./utils"
 import { postTimer, timerModeString } from "./timer"
+import { sendNotification } from "./utils"
 
 import './style.css';
 
@@ -41,12 +42,7 @@ export function App() {
     }
     const notificationHandler = (e) => {
       const timer = JSON.parse(e.data)
-      const n = new Notification("Goje", { body: `${timerModeString(timer.Mode)} has ${e.type}ed` });
-      document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "visible") {
-          n.close();
-        }
-      });
+      sendNotification(`${timerModeString(timer.Mode)} has ${e.type}ed`)
     }
     localStorage.setItem('notification', String(notificationEnabled));
     if (notificationEnabled) {
