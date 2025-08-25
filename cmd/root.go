@@ -39,7 +39,7 @@ type AppConfig struct {
 	TcpAddress    string        `mapstructure:"tcp-address"`
 	Fifo          string        `mapstructure:"fifo"`
 	Loglevel      string        `mapstructure:"loglevel"`
-	Certfile      string        `mapstructure:"pemfile"`
+	Certfile      string        `mapstructure:"certfile"`
 	Keyfile       string        `mapstructure:"keyfile"`
 	httpDaemon    *httpd.Daemon `mapstructure:"-"`
 }
