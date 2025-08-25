@@ -147,11 +147,14 @@ func setupServerAndSignalWatcher() (errout error) {
 		}
 		go t.Loop(ctx)
 		go func() {
+			slog.Debug("clean-up goroutine started")
 			select {
 			case <- ctx.Done():
+				slog.Debug("clean-up goroutine quitted")
 				return
 			case <-sigc:
 			}
+			cancel()
 			slog.Debug("caught deadly signal")
 			t.Config.OnQuit.RunSync(&t)
 			slog.Debug("clean up finished. quitting")
@@ -172,12 +175,15 @@ func setupConfigForCmd(cmd *cobra.Command) (errout error) {
 	if err := readConfig(cmd); err != nil {
 		return err
 	}
+
 	viper.OnConfigChange(func(e fsnotify.Event) {
-		slog.Info("config changed", "path", e.Name)
-		if err := readConfig(cmd); err != nil {
-			errout = err
+		if e.Has(fsnotify.Write) {
+			slog.Info("config changed", "path", e.Name, "event", e)
+			if err := readConfig(cmd); err != nil {
+				errout = err
+			}
+			cancel()
 		}
-		cancel()
 	})
 	viper.WatchConfig()
 	return
