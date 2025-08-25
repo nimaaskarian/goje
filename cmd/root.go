@@ -164,9 +164,6 @@ func setupServerAndSignalWatcher() (errout error) {
 			slog.Info("restart signal (SIGHUP) caught. restarting...")
 		case <-ctx.Done():
 		}
-		if config.httpDaemon != nil {
-			config.httpDaemon.BroadcastToSSEClients(httpd.Event{Name: "restart"})
-		}
 	}
 }
 

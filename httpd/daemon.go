@@ -84,6 +84,7 @@ func (d *Daemon) Run(address, certfile, keyfile string, ctx context.Context) (er
 	}
 
 	<-ctx.Done()
+	d.BroadcastToSSEClients(Event{Name: "restart"})
 	slog.Info("shutting http server down...")
 	ctx = context.Background()
 	httpServer.Shutdown(ctx)
