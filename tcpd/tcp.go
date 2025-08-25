@@ -2,6 +2,7 @@ package tcpd
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -44,7 +45,7 @@ func (e WrongNumberOfArgsError) Error() string {
 	return "wrong number of arguments for \"" + e.cmd + "\""
 }
 
-func ParseInput(timer *timer.Timer, input string) (string, string, error) {
+func ParseInput(timer *timer.PomodoroTimer, input string) (string, string, error) {
 	splited := strings.Split(input, " ")
 	cmd := splited[0]
 	var err error
@@ -88,13 +89,13 @@ command: %s
 	return cmd, out, err
 }
 
-func pauseCmd(timer *timer.Timer, args []string) (string, error) {
+func pauseCmd(timer *timer.PomodoroTimer, args []string) (string, error) {
 	switch len(args) {
 	case 1:
 		timer.Pause()
 	case 2:
 		var err error
-		timer.Paused, err = parseBool(args[1])
+		timer.State.Paused, err = parseBool(args[1])
 		if err != nil {
 			return "", err
 		}
@@ -107,13 +108,13 @@ func pauseCmd(timer *timer.Timer, args []string) (string, error) {
 	return "", nil
 }
 
-func sessionsCmd(timer *timer.Timer, args []string) (string, error) {
+func sessionsCmd(timer *timer.PomodoroTimer, args []string) (string, error) {
 	switch len(args) {
 	case 2:
-		err := parseRelativeNumber(args[1], &timer.FinishedSessions)
+		err := parseRelativeNumber(args[1], &timer.State.FinishedSessions)
 		if err != nil {
 			return "", err
-		} 
+		}
 		if !timer.Config.OnSet.Run(timer) {
 			timer.Config.OnChange.Run(timer)
 		}
@@ -123,7 +124,7 @@ func sessionsCmd(timer *timer.Timer, args []string) (string, error) {
 	return "", nil
 }
 
-func configSessionsCmd(timer *timer.Timer, args []string) (string, error) {
+func configSessionsCmd(timer *timer.PomodoroTimer, args []string) (string, error) {
 	switch len(args) {
 	case 2:
 		err := parseRelativeNumber(args[1], &timer.Config.Sessions)
@@ -162,7 +163,7 @@ func parseRelativeNumber(input string, output *uint) (err error) {
 	return nil
 }
 
-func seekCmd(timer *timer.Timer, args []string) (string, error) {
+func seekCmd(timer *timer.PomodoroTimer, args []string) (string, error) {
 	switch len(args) {
 	case 2:
 		if strings.HasPrefix(args[1], "+") || strings.HasPrefix(args[1], "-") {
@@ -184,7 +185,7 @@ func seekCmd(timer *timer.Timer, args []string) (string, error) {
 	return "", nil
 }
 
-func resetCmd(timer *timer.Timer, args []string) (string, error) {
+func resetCmd(timer *timer.PomodoroTimer, args []string) (string, error) {
 	switch len(args) {
 	case 1:
 		timer.Reset()
@@ -194,7 +195,7 @@ func resetCmd(timer *timer.Timer, args []string) (string, error) {
 	return "", nil
 }
 
-func nextModeCmd(timer *timer.Timer, args []string) (string, error) {
+func nextModeCmd(timer *timer.PomodoroTimer, args []string) (string, error) {
 	switch len(args) {
 	case 1:
 		timer.SwitchNextMode()
@@ -204,7 +205,7 @@ func nextModeCmd(timer *timer.Timer, args []string) (string, error) {
 	return "", nil
 }
 
-func prevModeCmd(timer *timer.Timer, args []string) (string, error) {
+func prevModeCmd(timer *timer.PomodoroTimer, args []string) (string, error) {
 	switch len(args) {
 	case 1:
 		timer.SwitchPrevMode()
@@ -214,7 +215,7 @@ func prevModeCmd(timer *timer.Timer, args []string) (string, error) {
 	return "", nil
 }
 
-func timerCmd(timer *timer.Timer, args []string) (string, error) {
+func timerCmd(timer *timer.PomodoroTimer, args []string) (string, error) {
 	switch len(args) {
 	case 1:
 		timer_value := reflect.ValueOf(*timer)
@@ -242,7 +243,7 @@ func timerCmd(timer *timer.Timer, args []string) (string, error) {
 	}
 }
 
-func initCmd(timer *timer.Timer, args []string) (string, error) {
+func initCmd(timer *timer.PomodoroTimer, args []string) (string, error) {
 	switch len(args) {
 	case 1:
 		timer.Init()
@@ -260,7 +261,7 @@ func parseBool(input string) (bool, error) {
 }
 
 type Daemon struct {
-	Timer    *timer.Timer
+	Timer    *timer.PomodoroTimer
 	Listener net.Listener
 }
 
@@ -275,6 +276,7 @@ func (d *Daemon) InitializeListener(address string) error {
 
 func (d *Daemon) handleConnection(conn net.Conn) {
 	conn.Write([]byte("OK goje 0.0.1\n"))
+	defer conn.Close()
 	for {
 		buff, err := bufio.NewReader(conn).ReadString('\n')
 		if err != nil {
@@ -288,10 +290,13 @@ func (d *Daemon) handleConnection(conn net.Conn) {
 			conn.Write(append([]byte(out), []byte("OK\n")...))
 		}
 	}
-	defer conn.Close()
 }
 
-func (d *Daemon) Run() {
+func (d *Daemon) Run(ctx context.Context) {
+	go func() {
+		<-ctx.Done()
+		d.Listener.Close()
+	}()
 	for {
 		conn, err := d.Listener.Accept()
 		if err != nil {

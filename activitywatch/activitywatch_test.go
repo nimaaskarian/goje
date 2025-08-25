@@ -10,7 +10,7 @@ import (
 )
 
 func TestWatcherDuration(t *testing.T) {
-	tomato := timer.Timer{}
+	tomato := timer.PomodoroTimer{}
 	tomato.Config = &timer.DefaultConfig
 	tomato.Config.Duration = [timer.MODE_MAX]time.Duration{
 		time.Second * 2,
@@ -40,7 +40,7 @@ func TestWatcherDuration(t *testing.T) {
 		if err := c.BindJSON(&event); err != nil {
 			t.Fatal(err)
 		}
-		mode := tomato.Mode
+		mode := tomato.State.Mode
 		if time.Duration(event.Duration) != tomato.Config.Duration[mode] {
 			t.Fatal("duration mismatch", time.Duration(event.Duration), tomato.Config.Duration[mode], mode)
 		}

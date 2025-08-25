@@ -7,23 +7,23 @@ import (
 )
 
 func TestCycleMode(t *testing.T) {
-	timer := Timer{
+	timer := PomodoroTimer{
 		Config: &DefaultConfig,
 	}
 	timer.Init()
 	for range 3 {
 		timer.SwitchNextMode()
-		if timer.Mode != ShortBreak {
+		if timer.State.Mode != ShortBreak {
 			t.Fatal("Failed cycle mode short break")
 		}
 		timer.SwitchNextMode()
-		if timer.Mode != Pomodoro {
+		if timer.State.Mode != Pomodoro {
 			t.Fatal("Failed cycle mode to pomodoro")
 		}
 	}
 	timer.SwitchNextMode()
-	if timer.Mode != LongBreak {
-		t.Fatal("Failed cycle mode to long break", timer.Mode)
+	if timer.State.Mode != LongBreak {
+		t.Fatal("Failed cycle mode to long break", timer.State.Mode)
 	}
 }
 
@@ -31,14 +31,14 @@ func TestTick(t *testing.T) {
 	var config = DefaultConfig
 	config.DurationPerTick = time.Millisecond * 10
 
-	timer := Timer{
+	timer := PomodoroTimer{
 		Config: &config,
 	}
 	timer.Init()
 	for i := range 5 {
 		expected := config.Duration[Pomodoro] - time.Duration(i)*time.Millisecond*10
-		if timer.Duration != expected {
-			t.Fatalf("Failed loop %d != %d", timer.Duration, expected)
+		if timer.State.Duration != expected {
+			t.Fatalf("Failed loop %d != %d", timer.State.Duration, expected)
 		}
 		timer.tick()
 	}
@@ -48,15 +48,15 @@ func TestLoop(t *testing.T) {
 	var config = DefaultConfig
 	config.DurationPerTick = time.Millisecond * 10
 
-	timer := Timer{
+	timer := PomodoroTimer{
 		Config: &config,
 	}
 	timer.Init()
 	go timer.Loop()
 	time.Sleep(time.Millisecond * 21)
 	expected := DefaultConfig.Duration[Pomodoro] - 2*time.Millisecond*10
-	if timer.Duration != expected {
-		t.Fatalf("Failed loop %d != %d", timer.Duration, expected)
+	if timer.State.Duration != expected {
+		t.Fatalf("Failed loop %d != %d", timer.State.Duration, expected)
 	}
 }
 
@@ -68,27 +68,27 @@ func TestTimer(t *testing.T) {
 	config.Duration[ShortBreak] = 2 * config.DurationPerTick
 	config.Duration[LongBreak] = 5 * config.DurationPerTick
 
-	timer := Timer{
+	timer := PomodoroTimer{
 		Config: &config,
 	}
 	timer.Init()
 	go timer.Loop()
 	time.Sleep(time.Millisecond * 43)
-	if timer.Mode != ShortBreak {
-		t.Fatalf("Didn't cycle mode to short break %s!=%s. time left %d", timer.Mode, ShortBreak, timer.Duration.Milliseconds())
+	if timer.State.Mode != ShortBreak {
+		t.Fatalf("Didn't cycle mode to short break %s!=%s. time left %d", timer.State.Mode, ShortBreak, timer.State.Duration.Milliseconds())
 	}
 	time.Sleep(time.Millisecond * 23)
-	if timer.Mode != Pomodoro {
-		t.Fatalf("Didn't cycle mode to pomodoro %s!=%s. time left %s", timer.Mode, Pomodoro, timer.String())
+	if timer.State.Mode != Pomodoro {
+		t.Fatalf("Didn't cycle mode to pomodoro %s!=%s. time left %s", timer.State.Mode, Pomodoro, timer.String())
 	}
 	time.Sleep(time.Millisecond * 43)
-	if timer.Mode != LongBreak {
-		t.Fatalf("Didn't cycle mode to long break %s!=%s. time left %s", timer.Mode, LongBreak, timer.String())
+	if timer.State.Mode != LongBreak {
+		t.Fatalf("Didn't cycle mode to long break %s!=%s. time left %s", timer.State.Mode, LongBreak, timer.String())
 	}
 }
 
 func ExampleTimer_String() {
-	timer := Timer{
+	timer := PomodoroTimer{
 		Config: &DefaultConfig,
 	}
 	timer.Init()

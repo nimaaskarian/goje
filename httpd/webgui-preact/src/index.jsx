@@ -42,7 +42,7 @@ export function App() {
     }
     const notificationHandler = (e) => {
       const timer = JSON.parse(e.data)
-      sendNotification(`${timerModeString(timer.Mode)} has ${e.type}ed`)
+      sendNotification(`${timerModeString(timer.State.Mode)} has ${e.type}ed`)
     }
     localStorage.setItem('notification', String(notificationEnabled));
     if (notificationEnabled) {
@@ -64,15 +64,15 @@ export function App() {
           <ModeSelection timer={timer} />
           <div id="timer-sessions-wrapper" class="flex flex-row justify-center gap-2">
             <Button title="-1 finished sessions" onClick={() => {
-              if (timer.FinishedSessions > 0) {
-                timer.FinishedSessions--;
+              if (timer.State.FinishedSessions > 0) {
+                timer.State.FinishedSessions--;
               }
               postTimer(timer);
             }}>
               {minus_icon}
             </Button>
-            {timer.FinishedSessions}/{timer.Config.Sessions}
-            <Button title="+1 finished sessions" onClick={() => { timer.FinishedSessions++; postTimer(timer); }}>
+            {timer.State.FinishedSessions}/{timer.Config.Sessions}
+            <Button title="+1 finished sessions" onClick={() => { timer.State.FinishedSessions++; postTimer(timer); }}>
               {plus_icon}
             </Button>
           </div>
@@ -82,8 +82,8 @@ export function App() {
             <Button id="timer-control-prev" title="Previous mode" onClick={() => { postTimer(timer, "/prevmode") }}>
               {prev_icon}
             </Button>
-            <Button id="timer-control-pause" title={`${timer.Paused ? "Resume" : "Pause"} timer`} onClick={() => { postTimer(timer, "/pause") }}>
-              {timer.Paused ? play_icon : pause_icon}
+            <Button id="timer-control-pause" title={`${timer.State.Paused ? "Resume" : "Pause"} timer`} onClick={() => { postTimer(timer, "/pause") }}>
+              {timer.State.Paused ? play_icon : pause_icon}
             </Button>
             <Button id="timer-control-next" title="Next mode" onClick={() => { postTimer(timer, "/nextmode") }}>
               {next_icon}
@@ -105,8 +105,8 @@ export function App() {
 function TimerCircle(p) {
   const progress = useMemo(() => {
     if (p.timer) {
-      const total_duration = p.timer.Config.Duration[p.timer.Mode]
-      return `${((total_duration - p.timer.Duration) / total_duration) * 100}%`
+      const total_duration = p.timer.Config.Duration[p.timer.State.Mode]
+      return `${((total_duration - p.timer.State.Duration) / total_duration) * 100}%`
     }
   }, [p.timer])
   return (
@@ -131,8 +131,8 @@ function ModeSelection(p) {
   }, [])
 
   return (
-    <select id="timer-mode" aria-label="Timer mode" title="Timer mode" value={p.timer.Mode} class="dark:bg-zinc-900 bg-zinc-200 p-2 rounded" onChange={(e) => {
-      p.timer.Mode = parseInt(e.target.value);
+    <select id="timer-mode" aria-label="Timer mode" title="Timer mode" value={p.timer.State.Mode} class="dark:bg-zinc-900 bg-zinc-200 p-2 rounded" onChange={(e) => {
+      p.timer.State.Mode = parseInt(e.target.value);
       postTimer(p.timer);
     }}>
       {modeOptions}
@@ -146,10 +146,10 @@ function Timer(props) {
     let fraclen = 0
     if (props.timer.Config.DurationPerTick < 1E9) {
       fraclen = Math.log10(1E9 / props.timer.Config.DurationPerTick + 1) >> 0
-      const fraction_value = (props.timer.Duration % 1E9) / props.timer.Config.DurationPerTick
+      const fraction_value = (props.timer.State.Duration % 1E9) / props.timer.Config.DurationPerTick
       fraction = `.${String(fraction_value).padStart(fraclen, '0')}`
     }
-    let seconds = (props.timer.Duration / 1E9 >> 0);
+    let seconds = (props.timer.State.Duration / 1E9 >> 0);
     let minutes = (seconds / 60 >> 0)
     seconds = seconds % 60
     let hours_value = (minutes / 60 >> 0)
@@ -159,7 +159,7 @@ function Timer(props) {
     }
     minutes = minutes % 60
     return [fraction, seconds, minutes, hours]
-  }, [props.timer.Duration, props.timer.Config.DurationPerTick])
+  }, [props.timer.State.Duration, props.timer.Config.DurationPerTick])
 
   return (
     <div id="timer" class="text-2xl font-bold">

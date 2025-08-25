@@ -30,13 +30,13 @@ func (d *Watcher) Init() {
 	d.client.CreateBucket(d.bucket_id, EVENT_TYPE)
 }
 
-func (d *Watcher) pushCurrentModeNow(t *timer.Timer) {
+func (d *Watcher) pushCurrentModeNow(t *timer.PomodoroTimer) {
 	d.pushCurrentMode(t, time.Now())
 }
 
-func (d *Watcher) pushCurrentMode(t *timer.Timer, now time.Time) {
+func (d *Watcher) pushCurrentMode(t *timer.PomodoroTimer, now time.Time) {
 	duration := now.UTC().Sub(d.started)
-	mode_string := t.Mode.String()
+	mode_string := t.State.Mode.String()
 	event := aw_go.Event{
 		Duration:  aw_go.SecondsDuration(duration),
 		Timestamp: aw_go.IsoTime(d.started),
@@ -49,13 +49,13 @@ func (d *Watcher) pushCurrentMode(t *timer.Timer, now time.Time) {
 }
 
 func (d *Watcher) AddEventWatchers(config *timer.TimerConfig) {
-	config.OnModeStart.Append(func(t *timer.Timer) {
+	config.OnModeStart.Append(func(t *timer.PomodoroTimer) {
 		d.started = time.Now().UTC()
 	})
 	config.OnModeEnd.Append(d.pushCurrentModeNow)
 	config.OnQuit.Append(d.pushCurrentModeNow)
-	config.OnPause.Append(func(t *timer.Timer) {
-		if t.Paused {
+	config.OnPause.Append(func(t *timer.PomodoroTimer) {
+		if t.State.Paused {
 			now := time.Now().UTC()
 			d.paused_start = now
 			d.pushCurrentMode(t, now)

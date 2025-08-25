@@ -26,15 +26,15 @@ var clientCmd = &cobra.Command{
 		return setupConfigForCmd(cmd)
 	},
 	RunE: func(cmd *cobra.Command, args []string) (errout error) {
-		t := timer.Timer{}
+		t := timer.PomodoroTimer{}
 		if err := setupDaemons(&t); err != nil {
 			return err
 		}
 		if !strings.HasSuffix(outbound_address, "http://") && !strings.HasSuffix(outbound_address, "https://") {
 			outbound_address = "http://" + outbound_address
 		}
-		client := sse.NewClient(outbound_address+"/api/timer/stream")
-		t.Config.OnSet.Append(func (t *timer.Timer) {
+		client := sse.NewClient(outbound_address + "/api/timer/stream")
+		t.Config.OnSet.Append(func(t *timer.PomodoroTimer) {
 			content, _ := json.Marshal(t)
 			req, err := http.NewRequest("POST", outbound_address+"/api/timer", bytes.NewBuffer(content))
 			if err != nil {
@@ -50,21 +50,21 @@ var clientCmd = &cobra.Command{
 		go func() {
 			err := client.SubscribeRaw(func(msg *sse.Event) {
 				json.Unmarshal(msg.Data, &t)
-				switch string(msg.Event)  {
-					case "change":
-						t.Config.OnChange.Run(&t)
-					case "end":
-						t.Config.OnModeEnd.Run(&t)
-					case "start":
-						t.Config.OnModeStart.Run(&t)
-					case "pause":
-						t.Config.OnPause.Run(&t)
+				switch string(msg.Event) {
+				case "change":
+					t.Config.OnChange.Run(&t)
+				case "end":
+					t.Config.OnModeEnd.Run(&t)
+				case "start":
+					t.Config.OnModeStart.Run(&t)
+				case "pause":
+					t.Config.OnPause.Run(&t)
 				}
 			})
 			if err != nil {
 				errout = err
 			}
 		}()
-		return listenForSignalsForCmdAndTimer(cmd, &t)
+		return setupServerAndSignalWatcher()
 	},
 }

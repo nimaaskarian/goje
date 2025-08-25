@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -38,10 +39,13 @@ type AppConfig struct {
 	TcpAddress    string        `mapstructure:"tcp-address"`
 	Fifo          string        `mapstructure:"fifo"`
 	Loglevel      string        `mapstructure:"loglevel"`
-	Pemfile       string        `mapstructure:"pemfile"`
+	Certfile      string        `mapstructure:"pemfile"`
 	Keyfile       string        `mapstructure:"keyfile"`
-	httpDaemon   *httpd.Daemon `mapstructure:"-"`
+	httpDaemon    *httpd.Daemon `mapstructure:"-"`
 }
+
+var ctx context.Context
+var cancel context.CancelFunc
 
 type LogLevel slog.Level
 
@@ -81,7 +85,7 @@ func rootFlags() *pflag.FlagSet {
 	flagset.Bool("no-open-browser", false, "don't open the browser when running webgui")
 	flagset.BoolP("activitywatch", "", false, "daemon send's pomodoro data to activitywatch if is present")
 	flagset.StringP("fifo", "f", "", "write timer events in a fifo at given path")
-	flagset.String("pemfile", "", "path to ssl certificate's pem file")
+	flagset.String("certfile", "", "path to ssl certificate's cert file")
 	flagset.String("keyfile", "", "path to ssl certificate's key file")
 	return flagset
 }
@@ -100,50 +104,60 @@ func init() {
 var rootCmd = &cobra.Command{
 	Use:          "goje",
 	Short:        "a pomodoro timer server",
-	Long:         "goje is a pomodoro timer server with modern features, suitable for both everyday users and computer nerds",
+	Long:         "goje is a collaborative pomodoro timer with modern features, suitable for both everyday users and computer nerds",
 	SilenceUsage: true,
 	PreRunE: func(cmd *cobra.Command, args []string) (errout error) {
 		return setupConfigForCmd(cmd)
 	},
 	RunE: func(cmd *cobra.Command, args []string) (errout error) {
-		t := timer.Timer{}
-		if err := setupDaemons(&t); err != nil {
-			return err
-		}
-		t.Init()
-		go t.Loop()
-		return listenForSignalsForCmdAndTimer(cmd, &t)
+		return setupServerAndSignalWatcher()
 	},
 }
 
-func listenForSignalsForCmdAndTimer(cmd *cobra.Command, t *timer.Timer) (errout error) {
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT,
-	)
-	go func() {
-		sig := <-sigc
-		slog.Debug("caught deadly signal", "signal", sig)
-		t.Config.OnQuit.Run(t)
-		slog.Debug("clean up finished. quitting")
-		os.Exit(1)
-	}()
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGHUP)
+func setupServerAndSignalWatcher() (errout error) {
+	t := timer.PomodoroTimer{}
 	for {
-		<-sig
-		if err := setupConfigForCmd(cmd); err != nil {
-			errout = err
+		ctx, cancel = context.WithCancel(context.Background())
+		defer cancel()
+		sigc := make(chan os.Signal, 1)
+		signal.Notify(sigc,
+			syscall.SIGINT,
+			syscall.SIGTERM,
+			syscall.SIGQUIT,
+		)
+		t.Config = &config.Timer
+		if t.State.IsZero() {
+			slog.Debug("state is zero.")
+			t.Init()
+		} else {
+			slog.Debug("state is NOT zero.")
+		}
+		if err := setupDaemons(&t); err != nil {
+			return err
+		}
+		go t.Loop(ctx)
+		go func() {
+			sig := <-sigc
+			slog.Debug("caught deadly signal", "signal", sig)
+			t.Config.OnQuit.Run(&t)
+			slog.Debug("clean up finished. quitting")
+			os.Exit(1)
+		}()
+		restartSig := make(chan os.Signal, 1)
+		signal.Notify(restartSig, syscall.SIGHUP)
+		select {
+		case <-restartSig:
+			slog.Info("restart sig caught. cancelling...")
+		case <-ctx.Done():
 		}
 		if config.httpDaemon != nil {
-			config.httpDaemon.BroadcastToSSEClients(httpd.Event{ Name: "restart" })
+			config.httpDaemon.BroadcastToSSEClients(httpd.Event{Name: "restart"})
 		}
 	}
 }
 
 func setupConfigForCmd(cmd *cobra.Command) (errout error) {
+	slog.Info("running setup config")
 	if err := readConfig(cmd); err != nil {
 		return err
 	}
@@ -152,12 +166,14 @@ func setupConfigForCmd(cmd *cobra.Command) (errout error) {
 		if err := readConfig(cmd); err != nil {
 			errout = err
 		}
+		cancel()
 	})
 	viper.WatchConfig()
 	return
 }
 
 func readConfig(cmd *cobra.Command) error {
+	config = AppConfig{Timer: timer.DefaultConfig}
 	if config_file != "" {
 		// if the config_file arg is passed and doesn't exist
 		if _, err := os.Stat(config_file); os.IsNotExist(err) {
@@ -212,10 +228,11 @@ func readConfig(cmd *cobra.Command) error {
 	return nil
 }
 
-func setupDaemons(t *timer.Timer) (errout error) {
+func setupDaemons(t *timer.PomodoroTimer) (errout error) {
+	slog.Info("setting up daemons...")
 	if config.Fifo != "" {
 		utils.Mkfifo(config.Fifo)
-		writeToFile := func(t *timer.Timer) {
+		writeToFile := func(t *timer.PomodoroTimer) {
 			content, _ := json.Marshal(t)
 			go func() {
 				if err := os.WriteFile(config.Fifo, append(content, '\n'), 0644); err != nil {
@@ -225,7 +242,7 @@ func setupDaemons(t *timer.Timer) (errout error) {
 			slog.Debug("writing to fifo finished")
 		}
 		slog.Debug("setting up fifo events")
-		config.Timer.OnQuit.Append(func(*timer.Timer) {
+		config.Timer.OnQuit.Append(func(*timer.PomodoroTimer) {
 			slog.Debug("removing fifo", "path", config.Fifo)
 			os.Remove(config.Fifo)
 		})
@@ -242,17 +259,17 @@ func setupDaemons(t *timer.Timer) (errout error) {
 	t.Config = &config.Timer
 
 	if config.ExecStart != "" {
-		config.Timer.OnModeStart.Append(func(t *timer.Timer) {
+		config.Timer.OnModeStart.Append(func(t *timer.PomodoroTimer) {
 			runCommand(t, config.ExecStart, &errout)
 		})
 	}
 	if config.ExecEnd != "" {
-		config.Timer.OnModeEnd.Append(func(t *timer.Timer) {
+		config.Timer.OnModeEnd.Append(func(t *timer.PomodoroTimer) {
 			runCommand(t, config.ExecEnd, &errout)
 		})
 	}
 	if config.ExecPause != "" {
-		config.Timer.OnPause.Append(func(t *timer.Timer) {
+		config.Timer.OnPause.Append(func(t *timer.PomodoroTimer) {
 			runCommand(t, config.ExecPause, &errout)
 		})
 	}
@@ -264,7 +281,7 @@ func setupDaemons(t *timer.Timer) (errout error) {
 			return err
 		}
 		slog.Info("running tcp daemon", "address", config.TcpAddress)
-		go tcp_daemon.Run()
+		go tcp_daemon.Run(ctx)
 	}
 	if config.HttpAddress != "" {
 		config.httpDaemon = &httpd.Daemon{
@@ -279,7 +296,7 @@ func setupDaemons(t *timer.Timer) (errout error) {
 		}
 		slog.Info("running http daemon", "address", config.HttpAddress)
 		go func() {
-			errout = config.httpDaemon.Run(config.HttpAddress, config.Pemfile, config.Keyfile)
+			errout = config.httpDaemon.Run(config.HttpAddress, config.Certfile, config.Keyfile, ctx)
 		}()
 	}
 	return
@@ -301,7 +318,7 @@ func runWebgui(address string) {
 	}
 }
 
-func runCommand(t *timer.Timer, cmd string, errout *error) {
+func runCommand(t *timer.PomodoroTimer, cmd string, errout *error) {
 	content, _ := json.Marshal(t)
 	go func() {
 		if err := exec.Command(cmd, string(content)).Run(); err != nil {
