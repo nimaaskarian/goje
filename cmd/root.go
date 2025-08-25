@@ -41,6 +41,7 @@ type AppConfig struct {
 	Loglevel      string        `mapstructure:"loglevel"`
 	Certfile      string        `mapstructure:"certfile"`
 	Keyfile       string        `mapstructure:"keyfile"`
+	Statefile     string        `mapstructure:"statefile"`
 	httpDaemon    *httpd.Daemon `mapstructure:"-"`
 }
 
@@ -87,6 +88,7 @@ func rootFlags() *pflag.FlagSet {
 	flagset.StringP("fifo", "f", "", "write timer events in a fifo at given path")
 	flagset.String("certfile", "", "path to ssl certificate's cert file")
 	flagset.String("keyfile", "", "path to ssl certificate's key file")
+	flagset.String("statefile", "", "path a file that goje writes its state on when quitting, and recovering it on startup")
 	return flagset
 }
 
@@ -116,6 +118,14 @@ var rootCmd = &cobra.Command{
 
 func setupServerAndSignalWatcher() (errout error) {
 	t := timer.PomodoroTimer{}
+	if config.Statefile != "" {
+		content, err := os.ReadFile(config.Statefile)
+		if err == nil {
+			if err := json.Unmarshal(content, &t.State); err != nil {
+				return err
+			}
+		}
+	}
 	for {
 		ctx, cancel = context.WithCancel(context.Background())
 		defer cancel()
@@ -137,9 +147,13 @@ func setupServerAndSignalWatcher() (errout error) {
 		}
 		go t.Loop(ctx)
 		go func() {
-			sig := <-sigc
-			slog.Debug("caught deadly signal", "signal", sig)
-			t.Config.OnQuit.Run(&t)
+			select {
+			case <- ctx.Done():
+				return
+			case <-sigc:
+			}
+			slog.Debug("caught deadly signal")
+			t.Config.OnQuit.RunSync(&t)
 			slog.Debug("clean up finished. quitting")
 			os.Exit(1)
 		}()
@@ -147,7 +161,7 @@ func setupServerAndSignalWatcher() (errout error) {
 		signal.Notify(restartSig, syscall.SIGHUP)
 		select {
 		case <-restartSig:
-			slog.Info("restart sig caught. cancelling...")
+			slog.Info("restart signal (SIGHUP) caught. restarting...")
 		case <-ctx.Done():
 		}
 		if config.httpDaemon != nil {
@@ -244,11 +258,23 @@ func setupDaemons(t *timer.PomodoroTimer) (errout error) {
 		slog.Debug("setting up fifo events")
 		config.Timer.OnQuit.Append(func(*timer.PomodoroTimer) {
 			slog.Debug("removing fifo", "path", config.Fifo)
-			os.Remove(config.Fifo)
+			if err := os.Remove(config.Fifo); err != nil {
+				errout = err
+			}
 		})
 		config.Timer.OnChange.Append(writeToFile)
 		config.Timer.OnModeEnd.Append(writeToFile)
 		config.Timer.OnModeStart.Append(writeToFile)
+	}
+	if config.Statefile != "" {
+		slog.Debug("appending statefile")
+		config.Timer.OnQuit.Append(func(pt *timer.PomodoroTimer) {
+			slog.Debug("writing in state file", "statefile", config.Statefile)
+			content, _ := json.Marshal(pt.State)
+			if err := os.WriteFile(config.Statefile, content, 0644); err != nil {
+				errout = err
+			}
+		})
 	}
 	if config.Activitywatch {
 		aw := activitywatch.Watcher{}

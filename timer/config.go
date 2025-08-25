@@ -1,6 +1,7 @@
 package timer
 
 import (
+	"log/slog"
 	"time"
 )
 
@@ -45,10 +46,22 @@ func (e *TimerConfigEvent) AppendOnce(handler func(*PomodoroTimer)) {
 	e.OnEventOnce = append(e.OnEventOnce, handler)
 }
 
-// this is non-blocking. it iterates through all the events and goroutines them.
+// this is non-blocking (goroutine). it iterates through all the events and goroutines them.
 func (e *TimerConfigEvent) Run(t *PomodoroTimer) (ran bool) {
 	for _, handler := range append(e.OnEvent, e.OnEventOnce...) {
+		slog.Debug("running on event")
 		go handler(t)
+		ran = true
+	}
+	e.OnEventOnce = nil
+	return ran
+}
+
+// blocking version of Run(). uses no goroutines
+func (e *TimerConfigEvent) RunSync(t *PomodoroTimer) (ran bool) {
+	for _, handler := range append(e.OnEvent, e.OnEventOnce...) {
+		slog.Debug("running on event")
+		handler(t)
 		ran = true
 	}
 	e.OnEventOnce = nil
