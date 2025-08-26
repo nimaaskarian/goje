@@ -100,7 +100,7 @@ func (t *PomodoroTimer) tick() {
 	t.Config.OnChange.Run(t)
 }
 
-// Halts the current thread for ever. Use in a go routine.
+// Halts the current thread until ctx is Done. Use in a goroutine.
 func (t *PomodoroTimer) Loop(ctx context.Context) {
 	slog.Info("timer loop started")
 	timer := time.NewTimer(t.Config.DurationPerTick)

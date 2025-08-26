@@ -249,7 +249,7 @@ func setupDaemons(t *timer.PomodoroTimer) (errout error) {
 	slog.Info("setting up daemons...")
 	if config.Fifo != "" {
 		utils.Mkfifo(config.Fifo)
-		writeToFile := func(t *timer.PomodoroTimer) {
+		writeToFifo := func(t *timer.PomodoroTimer) {
 			content, _ := json.Marshal(t)
 			go func() {
 				if err := os.WriteFile(config.Fifo, append(content, '\n'), 0644); err != nil {
@@ -265,9 +265,11 @@ func setupDaemons(t *timer.PomodoroTimer) (errout error) {
 				errout = err
 			}
 		})
-		config.Timer.OnChange.Append(writeToFile)
-		config.Timer.OnModeEnd.Append(writeToFile)
-		config.Timer.OnModeStart.Append(writeToFile)
+		// initially write to fifo
+		writeToFifo(t);
+		config.Timer.OnChange.Append(writeToFifo)
+		config.Timer.OnModeEnd.Append(writeToFifo)
+		config.Timer.OnModeStart.Append(writeToFifo)
 	}
 	if config.Statefile != "" {
 		slog.Debug("appending statefile")
