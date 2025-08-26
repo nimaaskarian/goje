@@ -59,7 +59,7 @@ func (d *Daemon) Init() {
 	}, gzip.Gzip(gzip.DefaultCompression, gzip.WithExcludedPaths([]string{"/api"})))
 }
 
-func (d *Daemon) Run(address, certfile, keyfile string, ctx context.Context) (errout error) {
+func (d *Daemon) Run(address, certfile, keyfile string, ctx context.Context) {
 	httpServer := &http.Server{
 		Addr:    address,
 		Handler: d.engine.Handler(),
@@ -69,16 +69,17 @@ func (d *Daemon) Run(address, certfile, keyfile string, ctx context.Context) (er
 	}
 
 	if certfile != "" && keyfile != "" {
-		slog.Info("running https!", "certfile", certfile, "keyfile", keyfile)
+		slog.Info("running https daemon", "address", address, "certfile", certfile, "keyfile", keyfile)
 		go func() {
 			if err := httpServer.ListenAndServeTLS(certfile, keyfile); err != nil && err != http.ErrServerClosed {
-				errout = err
+				slog.Error("https server failed", "err", err)
 			}
 		}()
 	} else {
+		slog.Info("running http daemon", "address", address)
 		go func() {
 			if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				errout = err
+				slog.Error("http server failed", "err", err)
 			}
 		}()
 	}
@@ -88,5 +89,4 @@ func (d *Daemon) Run(address, certfile, keyfile string, ctx context.Context) (er
 	slog.Info("shutting http server down...")
 	ctx = context.Background()
 	httpServer.Shutdown(ctx)
-	return
 }

@@ -3,7 +3,9 @@ package cmd
 import (
 	"bytes"
 	"encoding/json"
+	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/nimaaskarian/goje/timer"
@@ -25,25 +27,25 @@ var clientCmd = &cobra.Command{
 	PreRunE: func(cmd *cobra.Command, args []string) (errout error) {
 		return setupConfigForCmd(cmd)
 	},
-	RunE: func(cmd *cobra.Command, args []string) (errout error) {
-		t := timer.PomodoroTimer{}
-		if err := setupDaemons(&t); err != nil {
-			return err
-		}
-		if !strings.HasSuffix(outbound_address, "http://") && !strings.HasSuffix(outbound_address, "https://") {
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if !strings.HasPrefix(outbound_address, "http://") && !strings.HasPrefix(outbound_address, "https://") {
 			outbound_address = "http://" + outbound_address
 		}
+		t := timer.PomodoroTimer{
+			Config: &config.Timer,
+		}
 		client := sse.NewClient(outbound_address + "/api/timer/stream")
-		t.Config.OnSet.Append(func(t *timer.PomodoroTimer) {
+		config.Timer.OnSet.Append(func(t *timer.PomodoroTimer) {
 			content, _ := json.Marshal(t)
 			req, err := http.NewRequest("POST", outbound_address+"/api/timer", bytes.NewBuffer(content))
 			if err != nil {
-				errout = err
+				slog.Error("making a request to address failed", "err", err)
+				os.Exit(1)
 			}
 			client := &http.Client{}
 			resp, err := client.Do(req)
 			if err != nil {
-				errout = err
+				slog.Error("sending a request to address failed", "err", err)
 			}
 			resp.Body.Close()
 		})
@@ -52,19 +54,20 @@ var clientCmd = &cobra.Command{
 				json.Unmarshal(msg.Data, &t)
 				switch string(msg.Event) {
 				case "change":
-					t.Config.OnChange.Run(&t)
+					config.Timer.OnChange.Run(&t)
 				case "end":
-					t.Config.OnModeEnd.Run(&t)
+					config.Timer.OnModeEnd.Run(&t)
 				case "start":
-					t.Config.OnModeStart.Run(&t)
+					config.Timer.OnModeStart.Run(&t)
 				case "pause":
-					t.Config.OnPause.Run(&t)
+					config.Timer.OnPause.Run(&t)
 				}
 			})
 			if err != nil {
-				errout = err
+				slog.Error("subscribing to SSE failed", "err", err)
+				os.Exit(1)
 			}
 		}()
-		return setupServerAndSignalWatcher()
+		return setupServerAndSignalWatcher(&t)
 	},
 }

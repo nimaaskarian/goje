@@ -16,14 +16,14 @@ const (
 	MODE_MAX
 )
 
-type PomdoroTimerState struct {
+type PomodoroTimerState struct {
 	Duration         time.Duration
 	Mode             TimerMode
 	FinishedSessions uint
 	Paused           bool
 }
 
-func (state *PomdoroTimerState) IsZero() bool {
+func (state *PomodoroTimerState) IsZero() bool {
 	return !state.Paused &&
 		state.Mode == Pomodoro &&
 		state.Duration == 0 &&
@@ -31,8 +31,8 @@ func (state *PomdoroTimerState) IsZero() bool {
 }
 
 type PomodoroTimer struct {
-	Config *TimerConfig
-	State  PomdoroTimerState
+	Config *TimerConfig `json:"Config"`
+	State  PomodoroTimerState `json:"State"`
 }
 
 func (t *PomodoroTimer) Reset() {

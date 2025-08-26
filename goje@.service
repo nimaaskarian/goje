@@ -6,7 +6,7 @@ User=%i
 Type=simple
 Restart=always
 RestartSec=5s
-ExecStart=BINDIR/goje --loglevel info
+ExecStart=BINDIR/goje
 
 # disallow writing to /usr, /bin, /sbin, ...
 ProtectSystem=yes

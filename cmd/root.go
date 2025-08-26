@@ -108,16 +108,18 @@ var rootCmd = &cobra.Command{
 	Short:        "a pomodoro timer server",
 	Long:         "goje is a collaborative pomodoro timer with modern features, suitable for both everyday users and computer nerds",
 	SilenceUsage: true,
-	PreRunE: func(cmd *cobra.Command, args []string) (errout error) {
+	PreRunE: func(cmd *cobra.Command, args []string) error {
 		return setupConfigForCmd(cmd)
 	},
-	RunE: func(cmd *cobra.Command, args []string) (errout error) {
-		return setupServerAndSignalWatcher()
+	RunE: func(cmd *cobra.Command, args []string) error {
+		t := timer.PomodoroTimer{
+			Config: &config.Timer,
+		}
+		return setupServerAndSignalWatcher(&t)
 	},
 }
 
-func setupServerAndSignalWatcher() (errout error) {
-	t := timer.PomodoroTimer{}
+func setupServerAndSignalWatcher(t *timer.PomodoroTimer) error {
 	if config.Statefile != "" {
 		content, err := os.ReadFile(config.Statefile)
 		if err == nil {
@@ -126,7 +128,8 @@ func setupServerAndSignalWatcher() (errout error) {
 			}
 		}
 	}
-	for {
+	quitting := false
+	for !quitting {
 		ctx, cancel = context.WithCancel(context.Background())
 		defer cancel()
 		sigc := make(chan os.Signal, 1)
@@ -134,15 +137,15 @@ func setupServerAndSignalWatcher() (errout error) {
 			syscall.SIGINT,
 			syscall.SIGTERM,
 			syscall.SIGQUIT,
+			syscall.SIGABRT,
 		)
-		t.Config = &config.Timer
 		if t.State.IsZero() {
 			slog.Debug("state is zero.")
 			t.Init()
 		} else {
 			slog.Debug("state is NOT zero.")
 		}
-		if err := setupDaemons(&t); err != nil {
+		if err := setupDaemons(t); err != nil {
 			return err
 		}
 		go t.Loop(ctx)
@@ -154,11 +157,11 @@ func setupServerAndSignalWatcher() (errout error) {
 				return
 			case <-sigc:
 			}
-			cancel()
-			slog.Debug("caught deadly signal")
-			t.Config.OnQuit.RunSync(&t)
-			slog.Debug("clean up finished. quitting")
-			os.Exit(1)
+			quitting = true
+			slog.Info("caught deadly signal")
+			t.Config.OnQuit.RunSync(t)
+			slog.Info("clean up finished. quitting")
+			os.Exit(0)
 		}()
 		restartSig := make(chan os.Signal, 1)
 		signal.Notify(restartSig, syscall.SIGHUP)
@@ -168,9 +171,10 @@ func setupServerAndSignalWatcher() (errout error) {
 		case <-ctx.Done():
 		}
 	}
+	return nil
 }
 
-func setupConfigForCmd(cmd *cobra.Command) (errout error) {
+func setupConfigForCmd(cmd *cobra.Command) error {
 	slog.Info("running setup config")
 	if err := readConfig(cmd); err != nil {
 		return err
@@ -180,13 +184,14 @@ func setupConfigForCmd(cmd *cobra.Command) (errout error) {
 		if e.Has(fsnotify.Write) {
 			slog.Info("config changed", "path", e.Name, "event", e)
 			if err := readConfig(cmd); err != nil {
-				errout = err
+				slog.Error("invalid config", "err", err)
+				os.Exit(1);
 			}
 			cancel()
 		}
 	})
 	viper.WatchConfig()
-	return
+	return nil
 }
 
 func readConfig(cmd *cobra.Command) error {
@@ -245,7 +250,7 @@ func readConfig(cmd *cobra.Command) error {
 	return nil
 }
 
-func setupDaemons(t *timer.PomodoroTimer) (errout error) {
+func setupDaemons(t *timer.PomodoroTimer) error {
 	slog.Info("setting up daemons...")
 	if config.Fifo != "" {
 		utils.Mkfifo(config.Fifo)
@@ -253,7 +258,7 @@ func setupDaemons(t *timer.PomodoroTimer) (errout error) {
 			content, _ := json.Marshal(t)
 			go func() {
 				if err := os.WriteFile(config.Fifo, append(content, '\n'), 0644); err != nil {
-					errout = err
+					slog.Error("writing to fifo failed", "err", err)
 				}
 			}()
 			slog.Debug("writing to fifo finished")
@@ -262,7 +267,7 @@ func setupDaemons(t *timer.PomodoroTimer) (errout error) {
 		config.Timer.OnQuit.Append(func(*timer.PomodoroTimer) {
 			slog.Debug("removing fifo", "path", config.Fifo)
 			if err := os.Remove(config.Fifo); err != nil {
-				errout = err
+				slog.Error("remove fifo failed", "err", err)
 			}
 		})
 		// initially write to fifo
@@ -277,7 +282,7 @@ func setupDaemons(t *timer.PomodoroTimer) (errout error) {
 			slog.Debug("writing in state file", "statefile", config.Statefile)
 			content, _ := json.Marshal(pt.State)
 			if err := os.WriteFile(config.Statefile, content, 0644); err != nil {
-				errout = err
+				slog.Error("write state file failed", "err", err)
 			}
 		})
 	}
@@ -291,17 +296,17 @@ func setupDaemons(t *timer.PomodoroTimer) (errout error) {
 
 	if config.ExecStart != "" {
 		config.Timer.OnModeStart.Append(func(t *timer.PomodoroTimer) {
-			runCommand(t, config.ExecStart, &errout)
+			runSystemCommand(t, config.ExecStart)
 		})
 	}
 	if config.ExecEnd != "" {
 		config.Timer.OnModeEnd.Append(func(t *timer.PomodoroTimer) {
-			runCommand(t, config.ExecEnd, &errout)
+			runSystemCommand(t, config.ExecEnd)
 		})
 	}
 	if config.ExecPause != "" {
 		config.Timer.OnPause.Append(func(t *timer.PomodoroTimer) {
-			runCommand(t, config.ExecPause, &errout)
+			runSystemCommand(t, config.ExecPause)
 		})
 	}
 	if config.TcpAddress != "" {
@@ -325,12 +330,9 @@ func setupDaemons(t *timer.PomodoroTimer) (errout error) {
 		if !config.NoWebgui {
 			go runWebgui(config.HttpAddress)
 		}
-		slog.Info("running http daemon", "address", config.HttpAddress)
-		go func() {
-			errout = config.httpDaemon.Run(config.HttpAddress, config.Certfile, config.Keyfile, ctx)
-		}()
+		go config.httpDaemon.Run(config.HttpAddress, config.Certfile, config.Keyfile, ctx)
 	}
-	return
+	return nil
 }
 
 func runWebgui(address string) {
@@ -349,11 +351,11 @@ func runWebgui(address string) {
 	}
 }
 
-func runCommand(t *timer.PomodoroTimer, cmd string, errout *error) {
+func runSystemCommand(t *timer.PomodoroTimer, cmd string) {
 	content, _ := json.Marshal(t)
 	go func() {
 		if err := exec.Command(cmd, string(content)).Run(); err != nil {
-			*errout = err
+			slog.Error("running system command failed", "cmd", cmd, "err", err)
 		}
 	}()
 }

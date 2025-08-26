@@ -32,7 +32,7 @@ ${TW}:
 	cd httpd/webgui-preact/; npm install tailwindcss @tailwindcss/vite
 
 ${SERVICE_FILE}: goje@.service
-	sed 's+BINDIR+${BIN_DIR}+' goje@.service | tee ${SERVICE_FILE} > /dev/null
+	sed 's+BINDIR+${BIN_DIR}+' goje@.service > ${SERVICE_FILE}
 
 install: all ${SERVICE_FILE}
 	mkdir -p ${BIN_DIR}
