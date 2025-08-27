@@ -26,6 +26,9 @@ import (
 
 var config_file string
 
+// global flag of quitting. turns on when a quitting precedure starts
+var quitting = false
+
 type AppConfig struct {
 	Timer         timer.TimerConfig
 	CustomCss     string        `mapstructure:"custom-css"`
@@ -69,6 +72,7 @@ func (level *LogLevel) Set(v string) error {
 var config = AppConfig{Timer: timer.DefaultConfig}
 var loglevel LogLevel
 
+// flags that are shared between client and root
 func rootFlags() *pflag.FlagSet {
 	flagset := pflag.NewFlagSet("roots", pflag.ExitOnError)
 	flagset.DurationSliceP("duration", "D", timer.DefaultConfig.Duration[:], "duration of timer as pomodoro,short break,long break")
@@ -128,7 +132,6 @@ func setupServerAndSignalWatcher(t *timer.PomodoroTimer) error {
 			}
 		}
 	}
-	quitting := false
 	for !quitting {
 		ctx, cancel = context.WithCancel(context.Background())
 		defer cancel()
@@ -139,14 +142,14 @@ func setupServerAndSignalWatcher(t *timer.PomodoroTimer) error {
 			syscall.SIGQUIT,
 			syscall.SIGABRT,
 		)
+		if err := setupDaemons(t); err != nil {
+			return err
+		}
 		if t.State.IsZero() {
 			slog.Debug("state is zero.")
 			t.Init()
 		} else {
 			slog.Debug("state is NOT zero.")
-		}
-		if err := setupDaemons(t); err != nil {
-			return err
 		}
 		go t.Loop(ctx)
 		go func() {
@@ -255,6 +258,9 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 	if config.Fifo != "" {
 		utils.Mkfifo(config.Fifo)
 		writeToFifo := func(t *timer.PomodoroTimer) {
+			if quitting {
+				return
+			}
 			content, _ := json.Marshal(t)
 			go func() {
 				if err := os.WriteFile(config.Fifo, append(content, '\n'), 0644); err != nil {
@@ -270,8 +276,7 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 				slog.Error("remove fifo failed", "err", err)
 			}
 		})
-		// initially write to fifo
-		writeToFifo(t);
+		config.Timer.OnInit.Append(writeToFifo)
 		config.Timer.OnChange.Append(writeToFifo)
 		config.Timer.OnModeEnd.Append(writeToFifo)
 		config.Timer.OnModeStart.Append(writeToFifo)

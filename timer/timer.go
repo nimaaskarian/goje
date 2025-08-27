@@ -57,6 +57,7 @@ func (t *PomodoroTimer) Init() {
 	t.State.FinishedSessions = 0
 	t.State.Paused = t.Config.Paused
 	t.Reset()
+	t.Config.OnInit.Run(t)
 }
 
 func (t *PomodoroTimer) Pause() {
