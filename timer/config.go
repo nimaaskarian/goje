@@ -50,7 +50,6 @@ func (e *TimerConfigEvent) AppendOnce(handler func(*PomodoroTimer)) {
 // this is non-blocking (goroutine). it iterates through all the events and goroutines them.
 func (e *TimerConfigEvent) Run(t *PomodoroTimer) (ran bool) {
 	for _, handler := range append(e.OnEvent, e.OnEventOnce...) {
-		slog.Debug("running on event")
 		go handler(t)
 		ran = true
 	}
@@ -61,7 +60,6 @@ func (e *TimerConfigEvent) Run(t *PomodoroTimer) (ran bool) {
 // blocking version of Run(). uses no goroutines
 func (e *TimerConfigEvent) RunSync(t *PomodoroTimer) (ran bool) {
 	for _, handler := range append(e.OnEvent, e.OnEventOnce...) {
-		slog.Debug("running on event")
 		handler(t)
 		ran = true
 	}

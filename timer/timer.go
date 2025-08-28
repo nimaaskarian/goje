@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+const VERSION = "v0.5.0"
 type TimerMode int
 
 const (
@@ -31,8 +32,8 @@ func (state *PomodoroTimerState) IsZero() bool {
 }
 
 type PomodoroTimer struct {
-	Config *TimerConfig `json:"Config"`
-	State  PomodoroTimerState `json:"State"`
+	Config *TimerConfig
+	State  PomodoroTimerState
 }
 
 func (t *PomodoroTimer) Reset() {

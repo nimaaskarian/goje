@@ -111,6 +111,7 @@ var rootCmd = &cobra.Command{
 	Use:          "goje",
 	Short:        "a pomodoro timer server",
 	Long:         "goje is a collaborative pomodoro timer with modern features, suitable for both everyday users and computer nerds",
+	Version:      timer.VERSION,
 	SilenceUsage: true,
 	PreRunE: func(cmd *cobra.Command, args []string) error {
 		return setupConfigForCmd(cmd)
@@ -142,14 +143,14 @@ func setupServerAndSignalWatcher(t *timer.PomodoroTimer) error {
 			syscall.SIGQUIT,
 			syscall.SIGABRT,
 		)
-		if err := setupDaemons(t); err != nil {
-			return err
-		}
 		if t.State.IsZero() {
 			slog.Debug("state is zero.")
 			t.Init()
 		} else {
 			slog.Debug("state is NOT zero.")
+		}
+		if err := setupDaemons(t); err != nil {
+			return err
 		}
 		go t.Loop(ctx)
 		go func() {
@@ -171,6 +172,7 @@ func setupServerAndSignalWatcher(t *timer.PomodoroTimer) error {
 		select {
 		case <-restartSig:
 			slog.Info("restart signal (SIGHUP) caught. restarting...")
+			cancel()
 		case <-ctx.Done():
 		}
 	}
@@ -276,6 +278,9 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 				slog.Error("remove fifo failed", "err", err)
 			}
 		})
+		// initially write to fifo. for times that timer is loaded from a state and 
+		// OnInit wouldn't fire
+		writeToFifo(t);
 		config.Timer.OnInit.Append(writeToFifo)
 		config.Timer.OnChange.Append(writeToFifo)
 		config.Timer.OnModeEnd.Append(writeToFifo)

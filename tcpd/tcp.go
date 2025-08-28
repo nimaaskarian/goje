@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"reflect"
@@ -275,11 +276,12 @@ func (d *Daemon) InitializeListener(address string) error {
 }
 
 func (d *Daemon) handleConnection(conn net.Conn) {
-	conn.Write([]byte("OK goje 0.0.1\n"))
+	conn.Write([]byte("OK goje "+timer.VERSION+"\n"))
 	defer conn.Close()
+	reader := bufio.NewReader(conn);
 	for {
-		buff, err := bufio.NewReader(conn).ReadString('\n')
-		if err != nil {
+		buff, err := reader.ReadString('\n')
+		if err != nil && errors.Is(err, io.EOF) {
 			break
 		}
 		cmd, out, err := ParseInput(d.Timer, strings.TrimSpace(buff))
@@ -293,16 +295,18 @@ func (d *Daemon) handleConnection(conn net.Conn) {
 }
 
 func (d *Daemon) Run(ctx context.Context) {
-	go func() {
-		<-ctx.Done()
-		d.Listener.Close()
-	}()
 	for {
-		conn, err := d.Listener.Accept()
-		if err != nil {
-			slog.Warn("connection throw error", "err", err)
-			return
+		select {
+		case <-ctx.Done():
+			d.Listener.Close()
+		default:
+			conn, err := d.Listener.Accept()
+			if err != nil {
+				slog.Warn("connection throw error", "err", err)
+				return
+			}
+			go d.handleConnection(conn)
 		}
-		go d.handleConnection(conn)
+		
 	}
 }
