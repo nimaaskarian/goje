@@ -39,7 +39,7 @@ func (t *PomodoroTimer) Reset() {
 	slog.Info("timer reseted. new time is %s", t.Config.Duration[t.State.Mode].String())
 	t.SeekTo(t.Config.Duration[t.State.Mode])
 	if !t.Config.OnSet.Run(t) {
-		t.Config.OnChange.Run(t)
+		t.Config.OnChange.RunSync(t)
 	}
 	if t.State.Paused {
 		t.Config.OnPause.OnEventOnce = []func(*PomodoroTimer){func(t *PomodoroTimer) {
