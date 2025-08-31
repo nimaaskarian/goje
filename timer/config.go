@@ -1,7 +1,6 @@
 package timer
 
 import (
-	"log/slog"
 	"time"
 )
 

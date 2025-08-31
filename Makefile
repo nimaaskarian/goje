@@ -38,6 +38,9 @@ install: all ${SERVICE_FILE}
 	mkdir -p ${BIN_DIR}
 	cp -f goje ${BIN_DIR}
 
+uninstall:
+	rm ${BIN_DIR}/goje ${SERVICE_FILE}
+
 clean:
 	rm ${ALL}
 	rm -r ${WEBGUI}

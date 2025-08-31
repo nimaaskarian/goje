@@ -258,6 +258,7 @@ func readConfig(cmd *cobra.Command) error {
 func setupDaemons(t *timer.PomodoroTimer) error {
 	slog.Info("setting up daemons...")
 	if config.Fifo != "" {
+		slog.Info("using fifo", "path", config.Fifo)
 		utils.Mkfifo(config.Fifo)
 		writeToFifo := func(t *timer.PomodoroTimer) {
 			if quitting {
