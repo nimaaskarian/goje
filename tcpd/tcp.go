@@ -297,16 +297,19 @@ func (d *Daemon) handleConnection(conn net.Conn) {
 func (d *Daemon) Run(ctx context.Context) {
 	for {
 		select {
-		case <-ctx.Done():
-			d.Listener.Close()
-		default:
-			conn, err := d.Listener.Accept()
-			if err != nil {
-				slog.Warn("connection throw error", "err", err)
+			case <-ctx.Done():
+				slog.Info("closing tcpd connection")
+				d.Listener.Close()
 				return
-			}
-			go d.handleConnection(conn)
+			default:
+				slog.Info("accepting connection...")
+				conn, err := d.Listener.Accept()
+				if err != nil {
+					slog.Warn("connection throw error", "err", err)
+					return
+				}
+				slog.Info("connection added!")
+				go d.handleConnection(conn)
 		}
-		
 	}
 }

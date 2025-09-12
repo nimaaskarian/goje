@@ -1,6 +1,7 @@
 package activitywatch
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -47,6 +48,6 @@ func TestWatcherDuration(t *testing.T) {
 	})
 	go router.Run(client.Config.Hostname + ":" + client.Config.Port)
 	tomato.Init()
-	go tomato.Loop()
+	go tomato.Loop(context.Background())
 	time.Sleep(time.Second * 9)
 }

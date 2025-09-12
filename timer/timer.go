@@ -37,7 +37,7 @@ type PomodoroTimer struct {
 }
 
 func (t *PomodoroTimer) Reset() {
-	slog.Info("timer reseted. new time is %s", t.Config.Duration[t.State.Mode].String())
+	slog.Info("timer reseted.", "new time", t.Config.Duration[t.State.Mode].String())
 	t.SeekTo(t.Config.Duration[t.State.Mode])
 	if !t.Config.OnSet.Run(t) {
 		t.Config.OnChange.RunSync(t)

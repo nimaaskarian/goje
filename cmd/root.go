@@ -172,7 +172,6 @@ func setupServerAndSignalWatcher(t *timer.PomodoroTimer) error {
 		select {
 		case <-restartSig:
 			slog.Info("restart signal (SIGHUP) caught. restarting...")
-			cancel()
 		case <-ctx.Done():
 		}
 	}

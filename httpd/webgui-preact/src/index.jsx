@@ -26,7 +26,7 @@ export function App() {
       })
     });
     sse.addEventListener("restart", () => {
-      window.location.reload()
+      window.location.reload(true)
     })
     sse.onerror = _ => {
       setTimer(null)

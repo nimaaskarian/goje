@@ -1,6 +1,7 @@
 package timer
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -52,7 +53,7 @@ func TestLoop(t *testing.T) {
 		Config: &config,
 	}
 	timer.Init()
-	go timer.Loop()
+	go timer.Loop(context.Background())
 	time.Sleep(time.Millisecond * 21)
 	expected := DefaultConfig.Duration[Pomodoro] - 2*time.Millisecond*10
 	if timer.State.Duration != expected {
@@ -72,7 +73,7 @@ func TestTimer(t *testing.T) {
 		Config: &config,
 	}
 	timer.Init()
-	go timer.Loop()
+	go timer.Loop(context.Background())
 	time.Sleep(time.Millisecond * 43)
 	if timer.State.Mode != ShortBreak {
 		t.Fatalf("Didn't cycle mode to short break %s!=%s. time left %d", timer.State.Mode, ShortBreak, timer.State.Duration.Milliseconds())
@@ -87,7 +88,7 @@ func TestTimer(t *testing.T) {
 	}
 }
 
-func ExampleTimer_String() {
+func ExamplePomodoroTimer_String() {
 	timer := PomodoroTimer{
 		Config: &DefaultConfig,
 	}
