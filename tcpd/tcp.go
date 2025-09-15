@@ -284,12 +284,17 @@ func (d *Daemon) handleConnection(conn net.Conn) {
 		if err != nil && errors.Is(err, io.EOF) {
 			break
 		}
-		cmd, out, err := ParseInput(d.Timer, strings.TrimSpace(buff))
-		if err != nil {
-			slog.Error("command throw error", "err", err)
-			conn.Write(fmt.Appendf(nil, "ACK {%s} %s\n", cmd, err))
+		buff = strings.TrimSpace(buff)
+		if buff != "" {
+			cmd, out, err := ParseInput(d.Timer, buff)
+			if err != nil {
+				slog.Error("command throw error", "err", err)
+				conn.Write(fmt.Appendf(nil, "ACK {%s} %s\n", cmd, err))
+			} else {
+				conn.Write(append([]byte(out), []byte("OK\n")...))
+			}
 		} else {
-			conn.Write(append([]byte(out), []byte("OK\n")...))
+			break
 		}
 	}
 }

@@ -2,7 +2,6 @@
 Description=goje pomodoro application
 
 [Service]
-User=%i
 Type=simple
 Restart=always
 RestartSec=5s
@@ -20,4 +19,4 @@ RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 RestrictNamespaces=yes
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
