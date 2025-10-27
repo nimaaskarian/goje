@@ -365,7 +365,7 @@ func runSystemCommand(t *timer.PomodoroTimer, cmd string) {
 	content, _ := json.Marshal(t)
 	go func() {
 		if err := exec.Command(cmd, string(content)).Run(); err != nil {
-			slog.Error("running system command failed", "cmd", cmd, "err", err)
+			slog.Error("running system command failed", "cmd", cmd, "err", err, "content", content)
 		}
 	}()
 }

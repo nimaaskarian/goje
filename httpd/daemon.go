@@ -37,13 +37,8 @@ func (d *Daemon) SetupEvents() {
 }
 
 func (d *Daemon) BroadcastToSSEClients(e Event) {
-	d.Clients.Range(func(id any, value any) (closed bool) {
+	d.Clients.Range(func(id any, value any) bool {
 		client := value.(chan Event)
-		defer func() {
-			if recover() != nil {
-				closed = false
-			}
-		}()
 		client <- e
 		return true
 	})
