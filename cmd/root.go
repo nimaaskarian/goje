@@ -30,22 +30,23 @@ var config_file string
 var quitting = false
 
 type AppConfig struct {
-	Timer         timer.TimerConfig
-	CustomCss     string        `mapstructure:"custom-css"`
-	Activitywatch bool          `mapstructure:"activitywatch"`
-	NoWebgui      bool          `mapstructure:"no-webgui"`
-	NoOpenBrowser bool          `mapstructure:"no-open-browser"`
-	ExecStart     string        `mapstructure:"exec-start"`
-	ExecEnd       string        `mapstructure:"exec-end"`
-	ExecPause     string        `mapstructure:"exec-pause"`
-	HttpAddress   string        `mapstructure:"http-address"`
-	TcpAddress    string        `mapstructure:"tcp-address"`
-	Fifo          string        `mapstructure:"fifo"`
-	Loglevel      string        `mapstructure:"loglevel"`
-	Certfile      string        `mapstructure:"certfile"`
-	Keyfile       string        `mapstructure:"keyfile"`
-	Statefile     string        `mapstructure:"statefile"`
-	httpDaemon    *httpd.Daemon `mapstructure:"-"`
+	Timer                timer.TimerConfig
+	CustomCss            string        `mapstructure:"custom-css"`
+	Activitywatch        bool          `mapstructure:"activitywatch"`
+	NoWebgui             bool          `mapstructure:"no-webgui"`
+	NoOpenBrowser        bool          `mapstructure:"no-open-browser"`
+	ExecStart            string        `mapstructure:"exec-start"`
+	ExecEnd              string        `mapstructure:"exec-end"`
+	ExecPause            string        `mapstructure:"exec-pause"`
+	HttpAddress          string        `mapstructure:"http-address"`
+	TcpAddress           string        `mapstructure:"tcp-address"`
+	Fifo                 string        `mapstructure:"fifo"`
+	Loglevel             string        `mapstructure:"loglevel"`
+	Certfile             string        `mapstructure:"certfile"`
+	Keyfile              string        `mapstructure:"keyfile"`
+	Statefile            string        `mapstructure:"statefile"`
+	StatefileKeepUpdated bool          `mapstructure:"statefile-keep-updated"`
+	httpDaemon           *httpd.Daemon `mapstructure:"-"`
 }
 
 var ctx context.Context
@@ -93,6 +94,7 @@ func rootFlags() *pflag.FlagSet {
 	flagset.String("certfile", "", "path to ssl certificate's cert file")
 	flagset.String("keyfile", "", "path to ssl certificate's key file")
 	flagset.String("statefile", "", "path a file that goje writes its state on when quitting, and recovering it on startup")
+	flagset.Bool("statefile-keep-updated", false, "keep state file updated; updating it on every kind of change (don't recommend this on a file on a SSD)")
 	return flagset
 }
 
@@ -156,7 +158,7 @@ func setupServerAndSignalWatcher(t *timer.PomodoroTimer) error {
 		go func() {
 			slog.Debug("clean-up goroutine started")
 			select {
-			case <- ctx.Done():
+			case <-ctx.Done():
 				slog.Debug("clean-up goroutine quitted")
 				return
 			case <-sigc:
@@ -189,7 +191,7 @@ func setupConfigForCmd(cmd *cobra.Command) error {
 			slog.Info("config changed", "path", e.Name, "event", e)
 			if err := readConfig(cmd); err != nil {
 				slog.Error("invalid config", "err", err)
-				os.Exit(1);
+				os.Exit(1)
 			}
 			cancel()
 		}
@@ -278,9 +280,9 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 				slog.Error("remove fifo failed", "err", err)
 			}
 		})
-		// initially write to fifo. for times that timer is loaded from a state and 
+		// initially write to fifo. for times that timer is loaded from a state and
 		// OnInit wouldn't fire
-		writeToFifo(t);
+		writeToFifo(t)
 		config.Timer.OnInit.Append(writeToFifo)
 		config.Timer.OnChange.Append(writeToFifo)
 		config.Timer.OnModeEnd.Append(writeToFifo)
@@ -288,13 +290,20 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 	}
 	if config.Statefile != "" {
 		slog.Debug("appending statefile")
-		config.Timer.OnQuit.Append(func(pt *timer.PomodoroTimer) {
+		write_to_state_file := func(pt *timer.PomodoroTimer) {
 			slog.Debug("writing in state file", "statefile", config.Statefile)
 			content, _ := json.Marshal(pt.State)
 			if err := os.WriteFile(config.Statefile, content, 0644); err != nil {
 				slog.Error("write state file failed", "err", err)
 			}
-		})
+		}
+		config.Timer.OnQuit.Append(write_to_state_file)
+		if config.StatefileKeepUpdated {
+			config.Timer.OnInit.Append(write_to_state_file)
+			config.Timer.OnChange.Append(write_to_state_file)
+			config.Timer.OnModeEnd.Append(write_to_state_file)
+			config.Timer.OnModeStart.Append(write_to_state_file)
+		}
 	}
 	if config.Activitywatch {
 		aw := activitywatch.Watcher{}

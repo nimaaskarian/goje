@@ -276,9 +276,9 @@ func (d *Daemon) InitializeListener(address string) error {
 }
 
 func (d *Daemon) handleConnection(conn net.Conn) {
-	conn.Write([]byte("OK goje "+timer.VERSION+"\n"))
+	conn.Write([]byte("OK goje " + timer.VERSION + "\n"))
 	defer conn.Close()
-	reader := bufio.NewReader(conn);
+	reader := bufio.NewReader(conn)
 	for {
 		buff, err := reader.ReadString('\n')
 		if err != nil && errors.Is(err, io.EOF) {
@@ -302,19 +302,19 @@ func (d *Daemon) handleConnection(conn net.Conn) {
 func (d *Daemon) Run(ctx context.Context) {
 	for {
 		select {
-			case <-ctx.Done():
-				slog.Info("closing tcpd connection")
-				d.Listener.Close()
+		case <-ctx.Done():
+			slog.Info("closing tcpd connection")
+			d.Listener.Close()
+			return
+		default:
+			slog.Info("accepting connection...")
+			conn, err := d.Listener.Accept()
+			if err != nil {
+				slog.Warn("connection throw error", "err", err)
 				return
-			default:
-				slog.Info("accepting connection...")
-				conn, err := d.Listener.Accept()
-				if err != nil {
-					slog.Warn("connection throw error", "err", err)
-					return
-				}
-				slog.Info("connection added!")
-				go d.handleConnection(conn)
+			}
+			slog.Info("connection added!")
+			go d.handleConnection(conn)
 		}
 	}
 }

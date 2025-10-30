@@ -8,6 +8,7 @@ import (
 )
 
 const VERSION = "v0.5.1"
+
 type TimerMode int
 
 const (

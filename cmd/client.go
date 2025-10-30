@@ -17,8 +17,8 @@ import (
 )
 
 var (
-outbound_address string
-insecure_tls bool
+	outbound_address string
+	insecure_tls     bool
 )
 
 func init() {
@@ -45,7 +45,7 @@ var clientCmd = &cobra.Command{
 		if strings.HasPrefix(outbound_address, "https://") {
 			var tlsConfig *tls.Config
 			if insecure_tls {
-				tlsConfig = &tls.Config {
+				tlsConfig = &tls.Config{
 					InsecureSkipVerify: true,
 				}
 			} else {
@@ -71,7 +71,7 @@ var clientCmd = &cobra.Command{
 			tr := &http.Transport{
 				TLSClientConfig: tlsConfig,
 			}
-			httpClient = &http.Client {
+			httpClient = &http.Client{
 				Transport: tr,
 			}
 		}
