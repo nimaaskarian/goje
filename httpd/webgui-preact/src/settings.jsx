@@ -15,6 +15,7 @@ import { sendNotification } from "./utils"
 export function Settings(p) {
   const duration = useMemo(() => [0, 1, 2].map(mode => formatDuration(p.timer.Config.Duration[mode])), [p.timer.Config.Duration])
   const [submitValue, setSubmitValue] = useState("save")
+  const [buttonValue, setButtonValue] = useState("save to file")
   
 
   return (
@@ -61,6 +62,15 @@ export function Settings(p) {
           }}>
             send notifications
           </Radio>
+          <input type="button" value={buttonValue}
+    onClick={(e)=> {
+     postTimer(p.timer, "/save-settings-to-file") 
+      setSubmitValue(`saved!`)
+      setTimeout(() => {
+        setSubmitValue("save")
+      }, 3000);
+    }}
+    class="cursor-pointer p-2 rounded transition ease-in-out duration-300 dark:bg-zinc-900 dark:hover:text-zinc-300 hover:text-zinc-700 bg-zinc-200" />
           <input type="submit" value={submitValue} class="cursor-pointer p-2 rounded transition ease-in-out duration-300 dark:bg-zinc-900 dark:hover:text-zinc-300 hover:text-zinc-700 bg-zinc-200" />
         </form>
       </div>

@@ -5,7 +5,7 @@ import (
 )
 
 type TimerConfig struct {
-	Sessions    uint                    `mapstructure:"sessions"`
+	Sessions    uint                    `mapstructure:"sessions,omitempty"`
 	Duration    [MODE_MAX]time.Duration `mapstructure:"duration"`
 	OnModeEnd   TimerConfigEvent        `json:"-"`
 	OnModeStart TimerConfigEvent        `json:"-"`
@@ -16,7 +16,7 @@ type TimerConfig struct {
 	OnPause         TimerConfigEvent `json:"-"`
 	OnQuit          TimerConfigEvent `json:"-"`
 	OnInit          TimerConfigEvent `json:"-"`
-	Paused          bool             `mapstructure:"paused"`
+	Paused          bool             `mapstructure:"paused,omitempty"`
 	DurationPerTick time.Duration    `mapstructure:"duration-per-tick"`
 }
 

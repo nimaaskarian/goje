@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/spf13/viper"
 )
 
 //go:embed webgui-preact/dist/*
@@ -28,21 +29,17 @@ func (d *Daemon) JsonRoutes() {
 		d.Timer.Reset()
 		c.JSON(http.StatusOK, d.Timer)
 	})
+	d.engine.POST("/api/timer/save-settings-to-file", func(c *gin.Context) {
+		d.handlePostTimer(c)
+		// viper.Set("timer", d.Timer.Config)
+		viper.WriteConfig()
+	})
 	d.engine.POST("/api/timer/prevmode", func(c *gin.Context) {
 		d.Timer.SwitchPrevMode()
 		c.JSON(http.StatusOK, d.Timer)
 	})
 	d.engine.POST("/api/timer", func(c *gin.Context) {
-		prev_mode := d.Timer.State.Mode
-		if err := c.BindJSON(d.Timer); err == nil {
-			if prev_mode != d.Timer.State.Mode {
-				d.Timer.Reset()
-			}
-			if !d.Timer.Config.OnSet.Run(d.Timer) {
-				d.Timer.Config.OnChange.Run(d.Timer)
-			}
-			c.JSON(http.StatusOK, d.Timer)
-		}
+		d.handlePostTimer(c)
 	})
 	d.engine.GET("/api/timer/stream", func(c *gin.Context) {
 		c.Header("Content-Type", "text/event-stream")
@@ -65,6 +62,19 @@ func (d *Daemon) JsonRoutes() {
 			return false
 		})
 	})
+}
+
+func (d *Daemon) handlePostTimer(c *gin.Context) {
+	prev_mode := d.Timer.State.Mode
+	if err := c.BindJSON(d.Timer); err == nil {
+		if prev_mode != d.Timer.State.Mode {
+			d.Timer.Reset()
+		}
+		if !d.Timer.Config.OnSet.Run(d.Timer) {
+			d.Timer.Config.OnChange.Run(d.Timer)
+		}
+		c.JSON(http.StatusOK, d.Timer)
+	}
 }
 
 func (d *Daemon) WebguiRoutes(custom_css_file string) {

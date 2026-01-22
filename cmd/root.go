@@ -31,21 +31,23 @@ var quitting = false
 
 type AppConfig struct {
 	Timer                timer.TimerConfig
-	CustomCss            string        `mapstructure:"custom-css"`
-	Activitywatch        bool          `mapstructure:"activitywatch"`
-	NoWebgui             bool          `mapstructure:"no-webgui"`
-	NoOpenBrowser        bool          `mapstructure:"no-open-browser"`
-	ExecStart            string        `mapstructure:"exec-start"`
-	ExecEnd              string        `mapstructure:"exec-end"`
-	ExecPause            string        `mapstructure:"exec-pause"`
-	HttpAddress          string        `mapstructure:"http-address"`
-	TcpAddress           string        `mapstructure:"tcp-address"`
-	Fifo                 string        `mapstructure:"fifo"`
-	Loglevel             string        `mapstructure:"loglevel"`
-	Certfile             string        `mapstructure:"certfile"`
-	Keyfile              string        `mapstructure:"keyfile"`
-	Statefile            string        `mapstructure:"statefile"`
-	StatefileKeepUpdated bool          `mapstructure:"statefile-keep-updated"`
+	CustomCss            string        `mapstructure:"custom-css,omitempty"`
+	Activitywatch        bool          `mapstructure:"activitywatch,omitempty"`
+	NoWebgui             bool          `mapstructure:"no-webgui,omitempty"`
+	NoOpenBrowser        bool          `mapstructure:"no-open-browser,omitempty"`
+	ExecStart            string        `mapstructure:"exec-start,omitempty"`
+	ExecEnd              string        `mapstructure:"exec-end,omitempty"`
+	ExecPause            string        `mapstructure:"exec-pause,omitempty"`
+	HttpAddress          string        `mapstructure:"http-address,omitempty"`
+	TcpAddress           string        `mapstructure:"tcp-address,omitempty"`
+	Fifo                 string        `mapstructure:"fifo,omitempty"`
+	Loglevel             string        `mapstructure:"loglevel,omitempty"`
+	Certfile             string        `mapstructure:"certfile,omitempty"`
+	Keyfile              string        `mapstructure:"keyfile,omitempty"`
+	Statefile            string        `mapstructure:"statefile,omitempty"`
+	StatefileKeepUpdated bool          `mapstructure:"statefile-keep-updated,omitempty"`
+	Version              bool          `mapstructure:"version,omitempty"`
+	Help                 bool          `mapstructure:"help,omitempty"`
 	httpDaemon           *httpd.Daemon `mapstructure:"-"`
 }
 
