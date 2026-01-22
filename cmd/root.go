@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -45,6 +47,7 @@ type AppConfig struct {
 	Certfile             string        `mapstructure:"certfile,omitempty"`
 	Keyfile              string        `mapstructure:"keyfile,omitempty"`
 	Statefile            string        `mapstructure:"statefile,omitempty"`
+  NtfyAddress          string        `mapstructure:"ntfy-address,omitempty"`
 	StatefileKeepUpdated bool          `mapstructure:"statefile-keep-updated,omitempty"`
 	Version              bool          `mapstructure:"version,omitempty"`
 	Help                 bool          `mapstructure:"help,omitempty"`
@@ -96,6 +99,7 @@ func rootFlags() *pflag.FlagSet {
 	flagset.String("certfile", "", "path to ssl certificate's cert file")
 	flagset.String("keyfile", "", "path to ssl certificate's key file")
 	flagset.String("statefile", "", "path a file that goje writes its state on when quitting, and recovering it on startup")
+	flagset.String("ntfy-address", "", "address to ntfy server")
 	flagset.Bool("statefile-keep-updated", false, "keep state file updated; updating it on every kind of change (don't recommend this on a file on a SSD)")
 	return flagset
 }
@@ -289,6 +293,42 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 		config.Timer.OnChange.Append(writeToFifo)
 		config.Timer.OnModeEnd.Append(writeToFifo)
 		config.Timer.OnModeStart.Append(writeToFifo)
+	}
+	if config.NtfyAddress != "" {
+
+		config.Timer.OnInit.Append((func(pt *timer.PomodoroTimer) {
+			reader:=strings.NewReader("Timer started!")
+			if _, err := http.Post(config.NtfyAddress, "text/plain" , reader); err != nil {
+				log.Fatalln(err)
+			}
+		}))
+		config.Timer.OnModeStart.Append((func(pt *timer.PomodoroTimer) {
+			var reader *strings.Reader
+			switch pt.State.Mode {
+			case 0:
+				reader=strings.NewReader("Pomodoro started!")
+			case 1:
+				reader=strings.NewReader("Short break!")
+			case 2:
+				reader=strings.NewReader("Long break!")
+			}
+			http.Post(config.NtfyAddress, "text/plain", reader)
+		}))
+		config.Timer.OnPause.Append(func(pt *timer.PomodoroTimer) {
+			var reader *strings.Reader
+			if pt.State.Paused {
+				reader=strings.NewReader("Timer paused!")
+			} else {
+				reader=strings.NewReader("Timer unpaused!")
+			}
+			http.Post(config.NtfyAddress, "text/plain", reader)
+		})
+		config.Timer.OnModeEnd.Append((func(pt *timer.PomodoroTimer) {
+			if pt.State.Mode  == 2 {
+				reader:=strings.NewReader("Long break ended!")
+				http.Post(config.NtfyAddress, "text/plain", reader)
+			}
+		}))
 	}
 	if config.Statefile != "" {
 		slog.Debug("appending statefile")
