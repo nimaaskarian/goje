@@ -42,7 +42,7 @@ install: all
 	mkdir -p ${BIN_DIR}
 	cp -f goje ${BIN_DIR}
 	cp -f systemd/${SERVICE_USER} ${SERVICE_USER_INS}
-	cp -f systemd/${SERVICE_SYSTEM} ${SERVICE_SYSTEM}
+	cp -f systemd/${SERVICE_SYSTEM} ${SERVICE_SYSTEM_INS}
 
 uninstall:
 	rm ${BIN_DIR}/goje ${SERVICE_FILE}
