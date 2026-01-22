@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -47,7 +46,7 @@ type AppConfig struct {
 	Certfile             string        `mapstructure:"certfile,omitempty"`
 	Keyfile              string        `mapstructure:"keyfile,omitempty"`
 	Statefile            string        `mapstructure:"statefile,omitempty"`
-  NtfyAddress          string        `mapstructure:"ntfy-address,omitempty"`
+	NtfyAddress          string        `mapstructure:"ntfy-address,omitempty"`
 	StatefileKeepUpdated bool          `mapstructure:"statefile-keep-updated,omitempty"`
 	Version              bool          `mapstructure:"version,omitempty"`
 	Help                 bool          `mapstructure:"help,omitempty"`
@@ -295,40 +294,62 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 		config.Timer.OnModeStart.Append(writeToFifo)
 	}
 	if config.NtfyAddress != "" {
-
+		if !strings.HasSuffix(config.NtfyAddress, "http://") && !strings.HasSuffix(config.NtfyAddress, "https://") {
+			slog.Warn("ntfy address doesn't specify either http or https. http is assumed. omit this warning by specifying the protocol in url.", "address", config.NtfyAddress)
+			config.NtfyAddress = "http://" + config.NtfyAddress
+		}
 		config.Timer.OnInit.Append((func(pt *timer.PomodoroTimer) {
-			reader:=strings.NewReader("Timer started!")
-			if _, err := http.Post(config.NtfyAddress, "text/plain" , reader); err != nil {
-				log.Fatalln(err)
+			if req, err := gojeNtfyRequest(config.NtfyAddress, "Timer init!", "tomato,arrow_forward"); err == nil {
+				if _, err := http.DefaultClient.Do(req); err != nil {
+					slog.Error("Failed to send ntfy request", "err", err)
+				}
 			}
 		}))
 		config.Timer.OnModeStart.Append((func(pt *timer.PomodoroTimer) {
-			var reader *strings.Reader
+			var msg, tags string
 			switch pt.State.Mode {
 			case 0:
-				reader=strings.NewReader("Pomodoro started!")
+				msg = "Pomodoro started!"
+				tags = "tomato"
 			case 1:
-				reader=strings.NewReader("Short break!")
+				msg = "Short break!"
+				tags = "coffee"
 			case 2:
-				reader=strings.NewReader("Long break!")
+				msg = "Long break!"
+				tags = "tropical_drink"
 			}
-			http.Post(config.NtfyAddress, "text/plain", reader)
+			if req, err := gojeNtfyRequest(config.NtfyAddress, msg, tags); err == nil {
+				if _, err := http.DefaultClient.Do(req); err != nil {
+					slog.Error("Failed to send ntfy request", "err", err)
+				}
+			}
 		}))
 		config.Timer.OnPause.Append(func(pt *timer.PomodoroTimer) {
-			var reader *strings.Reader
+			var msg, tags string
 			if pt.State.Paused {
-				reader=strings.NewReader("Timer paused!")
+				msg = "Timer paused!"
+				tags = "pause_button"
 			} else {
-				reader=strings.NewReader("Timer unpaused!")
+				msg = "Timer unpaused!"
+				tags = "arrow_forward"
 			}
-			http.Post(config.NtfyAddress, "text/plain", reader)
+			if req, err := gojeNtfyRequest(config.NtfyAddress, msg, tags); err == nil {
+				if _, err := http.DefaultClient.Do(req); err != nil {
+					slog.Error("Failed to send ntfy request", "err", err)
+				}
+			}
 		})
-		config.Timer.OnModeEnd.Append((func(pt *timer.PomodoroTimer) {
-			if pt.State.Mode  == 2 {
-				reader:=strings.NewReader("Long break ended!")
-				http.Post(config.NtfyAddress, "text/plain", reader)
-			}
-		}))
+		if config.Timer.Paused {
+			config.Timer.OnModeEnd.Append((func(pt *timer.PomodoroTimer) {
+				if pt.State.Mode == 2 {
+					if req, err := gojeNtfyRequest(config.NtfyAddress, "Long break ended!", "tomato"); err == nil {
+						if _, err := http.DefaultClient.Do(req); err != nil {
+							slog.Error("Failed to send ntfy request", "err", err)
+						}
+					}
+				}
+			}))
+		}
 	}
 	if config.Statefile != "" {
 		slog.Debug("appending statefile")
@@ -396,6 +417,15 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 	return nil
 }
 
+func gojeNtfyRequest(address, content, tags string) (*http.Request, error) {
+	req, err := http.NewRequest("POST", address, strings.NewReader(content))
+	if err != nil {
+		slog.Error("Failed to create ntfy request", "err", err)
+		return nil, err
+	}
+	req.Header.Set("Tags", tags)
+	return req, nil
+}
 func runWebgui(address string) {
 	slog.Debug("setting up webgui routes")
 	config.httpDaemon.WebguiRoutes(config.CustomCss)
