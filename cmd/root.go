@@ -294,7 +294,7 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 		config.Timer.OnModeStart.Append(writeToFifo)
 	}
 	if config.NtfyAddress != "" {
-		if !strings.HasSuffix(config.NtfyAddress, "http://") && !strings.HasSuffix(config.NtfyAddress, "https://") {
+		if !strings.HasPrefix(config.NtfyAddress, "http://") && !strings.HasPrefix(config.NtfyAddress, "https://") {
 			slog.Warn("ntfy address doesn't specify either http or https. http is assumed. omit this warning by specifying the protocol in url.", "address", config.NtfyAddress)
 			config.NtfyAddress = "http://" + config.NtfyAddress
 		}
