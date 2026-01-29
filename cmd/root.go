@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
-	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -17,6 +16,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/nimaaskarian/goje/activitywatch"
 	"github.com/nimaaskarian/goje/httpd"
+	"github.com/nimaaskarian/goje/ntfy"
 	"github.com/nimaaskarian/goje/tcpd"
 	"github.com/nimaaskarian/goje/timer"
 	"github.com/nimaaskarian/goje/utils"
@@ -294,62 +294,7 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 		config.Timer.OnModeStart.Append(writeToFifo)
 	}
 	if config.NtfyAddress != "" {
-		if !strings.HasPrefix(config.NtfyAddress, "http://") && !strings.HasPrefix(config.NtfyAddress, "https://") {
-			slog.Warn("ntfy address doesn't specify either http or https. http is assumed. omit this warning by specifying the protocol in url.", "address", config.NtfyAddress)
-			config.NtfyAddress = "http://" + config.NtfyAddress
-		}
-		config.Timer.OnInit.Append((func(pt *timer.PomodoroTimer) {
-			if req, err := gojeNtfyRequest(config.NtfyAddress, "Timer init!", "tomato,arrow_forward"); err == nil {
-				if _, err := http.DefaultClient.Do(req); err != nil {
-					slog.Error("Failed to send ntfy request", "err", err)
-				}
-			}
-		}))
-		config.Timer.OnModeStart.Append((func(pt *timer.PomodoroTimer) {
-			var msg, tags string
-			switch pt.State.Mode {
-			case 0:
-				msg = "Pomodoro started!"
-				tags = "tomato"
-			case 1:
-				msg = "Short break!"
-				tags = "coffee"
-			case 2:
-				msg = "Long break!"
-				tags = "tropical_drink"
-			}
-			if req, err := gojeNtfyRequest(config.NtfyAddress, msg, tags); err == nil {
-				if _, err := http.DefaultClient.Do(req); err != nil {
-					slog.Error("Failed to send ntfy request", "err", err)
-				}
-			}
-		}))
-		config.Timer.OnPause.Append(func(pt *timer.PomodoroTimer) {
-			var msg, tags string
-			if pt.State.Paused {
-				msg = "Timer paused!"
-				tags = "pause_button"
-			} else {
-				msg = "Timer unpaused!"
-				tags = "arrow_forward"
-			}
-			if req, err := gojeNtfyRequest(config.NtfyAddress, msg, tags); err == nil {
-				if _, err := http.DefaultClient.Do(req); err != nil {
-					slog.Error("Failed to send ntfy request", "err", err)
-				}
-			}
-		})
-		if config.Timer.Paused {
-			config.Timer.OnModeEnd.Append((func(pt *timer.PomodoroTimer) {
-				if pt.State.Mode == 2 {
-					if req, err := gojeNtfyRequest(config.NtfyAddress, "Long break ended!", "tomato"); err == nil {
-						if _, err := http.DefaultClient.Do(req); err != nil {
-							slog.Error("Failed to send ntfy request", "err", err)
-						}
-					}
-				}
-			}))
-		}
+		ntfy.Setup(config.NtfyAddress, config.Timer)
 	}
 	if config.Statefile != "" {
 		slog.Debug("appending statefile")
@@ -417,28 +362,11 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 	return nil
 }
 
-func gojeNtfyRequest(address, content, tags string) (*http.Request, error) {
-	req, err := http.NewRequest("POST", address, strings.NewReader(content))
-	if err != nil {
-		slog.Error("Failed to create ntfy request", "err", err)
-		return nil, err
-	}
-	req.Header.Set("Tags", tags)
-	return req, nil
-}
 func runWebgui(address string) {
 	slog.Debug("setting up webgui routes")
 	config.httpDaemon.WebguiRoutes(config.CustomCss)
 	if !config.NoOpenBrowser {
-		if strings.HasPrefix(address, "http://") {
-			utils.OpenURL(address)
-		} else {
-			if address[0] == ':' {
-				utils.OpenURL("http://localhost" + address)
-			} else {
-				utils.OpenURL("http://" + address)
-			}
-		}
+		utils.OpenURL(utils.FixHttpAddress(address))
 	}
 }
 

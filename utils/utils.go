@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"log/slog"
 )
 
 func EditorCmd(path string) (*exec.Cmd, error) {
@@ -32,4 +33,16 @@ func CmdStdOs(c *exec.Cmd) {
 	c.Stdout = os.Stdout
 	c.Stdin = os.Stdin
 	c.Stderr = os.Stderr
+}
+
+func FixHttpAddress(address string) string {
+	if strings.HasPrefix(address, "http://") || strings.HasPrefix(address, "https://") {
+		return address
+	}
+	if strings.HasPrefix(address, ":") {
+		return "http://localhost" + address
+	} else {
+		slog.Warn("address doesn't specify either http or https. http is assumed. omit this warning by specifying the protocol in url.", "address", address)
+		return "http://" + address
+	}
 }

@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/nimaaskarian/goje/timer"
+	"github.com/nimaaskarian/goje/utils"
 	"github.com/r3labs/sse/v2"
 	"github.com/spf13/cobra"
 )
@@ -35,9 +36,7 @@ var clientCmd = &cobra.Command{
 		return setupConfigForCmd(cmd)
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if !strings.HasPrefix(outbound_address, "http://") && !strings.HasPrefix(outbound_address, "https://") {
-			outbound_address = "http://" + outbound_address
-		}
+		outbound_address = utils.FixHttpAddress(outbound_address)
 		t := timer.PomodoroTimer{
 			Config: &config.Timer,
 		}
