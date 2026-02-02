@@ -1,24 +1,26 @@
 package mpris
 
 import (
+	"context"
 	"fmt"
 	"os"
+	"errors"
 
 	"github.com/godbus/dbus/v5"
-	"github.com/godbus/dbus/v5/prop"
 	"github.com/godbus/dbus/v5/introspect"
+	"github.com/godbus/dbus/v5/prop"
 
 	"github.com/nimaaskarian/goje/timer"
 )
 
 type Instance struct {
-	dbus  *dbus.Conn
-	pt *timer.PomodoroTimer
+	dbus *dbus.Conn
+	pt   *timer.PomodoroTimer
 
 	// interface implementations
 	root   *MediaPlayer2
 	player *Player
-	props *prop.Properties
+	props  *prop.Properties
 
 	Name string
 
@@ -28,8 +30,8 @@ type Instance struct {
 // NewInstance creates a new instance that takes care of the specified mpd.
 func NewInstance(pt *timer.PomodoroTimer) (ins *Instance, err error) {
 	ins = &Instance{
-		pt: pt,
-		Name: fmt.Sprintf("org.mpris.MediaPlayer2.goje.instance%d", os.Getpid()),
+		pt:          pt,
+		Name:        fmt.Sprintf("org.mpris.MediaPlayer2.goje.instance%d", os.Getpid()),
 		displayName: "Goje",
 	}
 
@@ -90,4 +92,3 @@ func (ins *Instance) Start(ctx context.Context) error {
 	}
 	return nil
 }
-

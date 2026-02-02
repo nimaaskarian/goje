@@ -2,10 +2,10 @@ package utils
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"os/exec"
 	"strings"
-	"log/slog"
 )
 
 func EditorCmd(path string) (*exec.Cmd, error) {

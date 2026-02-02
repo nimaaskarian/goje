@@ -286,4 +286,3 @@ func (i *Instance) IntrospectNode() *introspect.Node {
 		},
 	}
 }
-

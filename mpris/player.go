@@ -1,17 +1,17 @@
 // thanks to https://github.com/natsukagami/mpd-mpris/
-// code of the module "mpris" is mostly MIT licensed. places changed by me are 
+// code of the module "mpris" is mostly MIT licensed. places changed by me are
 // BSD 2-clause as other parts of this code
 
 package mpris
 
 import (
-	"context"
 	"errors"
 	"log"
 	"time"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/godbus/dbus/v5/prop"
+
 	"github.com/nimaaskarian/goje/timer"
 )
 
@@ -46,7 +46,6 @@ func newProp(value interface{}, cb func(*prop.Change) *dbus.Error) *prop.Prop {
 	}
 }
 
-
 func (p *Player) setProp(iface, name string, value dbus.Variant) {
 	if err := p.Instance.props.Set(iface, name, value); err != nil {
 		log.Printf("Setting %s %s failed: %+v\n", iface, name, err)
@@ -59,6 +58,7 @@ type Player struct {
 }
 
 type TimeInUs int64
+
 // UsFromDuration returns the type from a time.Duration
 func UsFromDuration(t time.Duration) TimeInUs {
 	return TimeInUs(t / time.Microsecond)
@@ -78,6 +78,7 @@ const (
 )
 
 type PlaybackStatus string
+
 const (
 	PlaybackStatusPlaying PlaybackStatus = "Playing"
 	PlaybackStatusPaused  PlaybackStatus = "Paused"
@@ -93,14 +94,14 @@ func PlaybackStatusFromPomodoroTimer(pt *timer.PomodoroTimer) PlaybackStatus {
 			return PlaybackStatusStopped
 		}
 		return PlaybackStatusPaused
-	} 
+	}
 	return PlaybackStatusPlaying
 }
 
 func LoopStatusFromPomodoroTimer(pt *timer.PomodoroTimer) LoopStatus {
 	if pt.Config.Paused {
 		return LoopStatusNone
-	} 
+	}
 	return LoopStatusPlaylist
 }
 
@@ -172,6 +173,7 @@ func (p *Player) Seek(x TimeInUs) *dbus.Error {
 }
 
 type TrackID string
+
 // SetPosition sets the current track position in microseconds.
 // https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:SetPosition
 func (p *Player) SetPosition(o TrackID, x TimeInUs) *dbus.Error {
