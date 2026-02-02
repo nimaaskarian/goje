@@ -3,9 +3,10 @@ Description=goje pomodoro application (system service)
 
 [Service]
 User=%i
-Type=simple
+Type=dbus
 Restart=always
-ExecStart=/usr/bin/goje
+ExecStart=/usr/bin/goje --mpris --mpris-no-instance
+BusName=org.mpris.MediaPlayer2.goje
 
 # disallow writing to /usr, /bin, /sbin, ...
 ProtectSystem=yes

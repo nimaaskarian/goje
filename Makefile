@@ -4,11 +4,11 @@ WEBGUI = httpd/webgui-preact/dist
 WEBGUI_DEPS = $(wildcard httpd/webgui-preact/src/* httpd/webgui-preact/public/* httpd/webgui-preact/index.html)
 TW = httpd/webgui-preact/node_modules/tailwindcss httpd/webgui-preact/node_modules/@tailwindcss/vite
 ANDROID_NDK_HOME:=/opt/android-sdk/ndk/27.0.12077973
-SERVICE_USER=goje.service
-SERVICE_SYSTEM=goje@.service
-SERVICE_USER_INS=${DESTDIR}${PREFIX}/lib/systemd/user/${SERVICE_USER}
-SERVICE_SYSTEM_INS=${DESTDIR}${PREFIX}/lib/systemd/system/${SERVICE_SYSTEM}
-SERVICES=systemd/${SERVICE_USER} systemd/${SERVICE_SYSTEM}
+SERVICE_USER_DIR=${DESTDIR}${PREFIX}/lib/systemd/user
+SERVICE_SYSTEM_DIR=${DESTDIR}${PREFIX}/lib/systemd/system
+SERVICES_SYSTEM=$(wildcard systemd/*@.service)
+SERVICES_USER=$(wildcard systemd/*[a-z].service)
+SERVICES=$(SERVICES_SYSTEM) $(SERVICES_USER)
 BIN_DIR=${DESTDIR}${PREFIX}/bin
 
 all: coverage.out goje $(SERVICES)
@@ -41,8 +41,8 @@ systemd/%.service: systemd/%.template
 install: all
 	mkdir -p ${BIN_DIR}
 	cp -f goje ${BIN_DIR}
-	cp -f systemd/${SERVICE_USER} ${SERVICE_USER_INS}
-	cp -f systemd/${SERVICE_SYSTEM} ${SERVICE_SYSTEM_INS}
+	cp -f ${SERVICES_USER} ${SERVICE_USER_DIR}
+	cp -f ${SERVICES_SYSTEM} ${SERVICE_SYSTEM_DIR}
 
 uninstall:
 	rm ${BIN_DIR}/goje ${SERVICE_FILE}

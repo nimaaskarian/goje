@@ -6,7 +6,7 @@ package mpris
 
 import (
 	"errors"
-	"log"
+	"log/slog"
 	"time"
 
 	"github.com/godbus/dbus/v5"
@@ -48,7 +48,7 @@ func newProp(value interface{}, cb func(*prop.Change) *dbus.Error) *prop.Prop {
 
 func (p *Player) setProp(iface, name string, value dbus.Variant) {
 	if err := p.Instance.props.Set(iface, name, value); err != nil {
-		log.Printf("Setting %s %s failed: %+v\n", iface, name, err)
+		slog.Error("setting prop failed", "interface", iface, "name", name, "err", err)
 	}
 }
 
@@ -123,6 +123,7 @@ func (p *Player) OnLoopStatus(c *prop.Change) *dbus.Error {
 // Next skips to the next track in the tracklist.
 // https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:Next
 func (p *Player) Next() *dbus.Error {
+	slog.Info("next request recieved from mpris")
 	p.pt.SwitchNextMode()
 	return nil
 }
@@ -130,6 +131,7 @@ func (p *Player) Next() *dbus.Error {
 // Previous skips to the previous track in the tracklist.
 // https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:Previous
 func (p *Player) Previous() *dbus.Error {
+	slog.Info("prev request recieved from mpris")
 	p.pt.SwitchPrevMode()
 	return nil
 }
@@ -137,6 +139,7 @@ func (p *Player) Previous() *dbus.Error {
 // Pause pauses playback.
 // https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:Pause
 func (p *Player) Pause() *dbus.Error {
+	slog.Info("pause request recieved from mpris")
 	p.pt.Pause(true)
 	return nil
 }
@@ -144,6 +147,7 @@ func (p *Player) Pause() *dbus.Error {
 // Pause starts or resumes playback.
 // https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:Play
 func (p *Player) Play() *dbus.Error {
+	slog.Info("play request recieved from mpris")
 	p.pt.Pause(false)
 	return nil
 }
@@ -153,6 +157,7 @@ func (p *Player) Play() *dbus.Error {
 // If playback is stopped, starts playback.
 // https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:PlayPause
 func (p *Player) PlayPause() *dbus.Error {
+	slog.Info("play-pause request recieved from mpris")
 	p.pt.TogglePause()
 	return nil
 }
@@ -160,6 +165,7 @@ func (p *Player) PlayPause() *dbus.Error {
 // Stop stops playback.
 // https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:Stop
 func (p *Player) Stop() *dbus.Error {
+	slog.Info("stop request recieved from mpris")
 	p.pt.Init()
 	p.pt.Pause(true)
 	return nil
@@ -168,6 +174,7 @@ func (p *Player) Stop() *dbus.Error {
 // Seek seeks forward in the current track by the specified number of microseconds.
 // https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:Seek
 func (p *Player) Seek(x TimeInUs) *dbus.Error {
+	slog.Info("seek recieved from mpris", "duration", x.Duration())
 	p.pt.SeekAdd(x.Duration())
 	return nil
 }
@@ -177,6 +184,7 @@ type TrackID string
 // SetPosition sets the current track position in microseconds.
 // https://specifications.freedesktop.org/mpris-spec/latest/Player_Interface.html#Method:SetPosition
 func (p *Player) SetPosition(o TrackID, x TimeInUs) *dbus.Error {
+	slog.Info("set-position recieved from mpris", "duration", x.Duration())
 	p.pt.SeekTo(x.Duration())
 	return nil
 }

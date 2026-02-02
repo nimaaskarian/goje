@@ -28,12 +28,19 @@ type Instance struct {
 	displayName string
 }
 
-type MetadataMap map[string]interface{}
+type MetadataMap map[string]any
 // NewInstance creates a new instance that takes care of the specified mpd.
-func NewInstance(pt *timer.PomodoroTimer) (ins *Instance, err error) {
+// no_instance = true means run the dbus on goje instead of goje.instance<pid>
+func NewInstance(pt *timer.PomodoroTimer, no_instance bool) (ins *Instance, err error) {
+	var name string
+	if no_instance {
+		name = "org.mpris.MediaPlayer2.goje"
+	} else {
+		name = fmt.Sprintf("org.mpris.MediaPlayer2.goje.instance%d", os.Getpid())
+	}
 	ins = &Instance{
 		pt:          pt,
-		Name:        fmt.Sprintf("org.mpris.MediaPlayer2.goje.instance%d", os.Getpid()),
+		Name:        name,
 		displayName: "Goje",
 	}
 
@@ -92,13 +99,13 @@ func (ins *Instance) Start(ctx context.Context) error {
 	ins.dbus.Export(ins.player, "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player")
 	ins.dbus.Export(introspect.NewIntrospectable(ins.IntrospectNode()), "/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Introspectable")
 
-	ins.pt.Config.OnChange.Append(func(pt *timer.PomodoroTimer) {
-		go ins.player.setProp("org.mpris.MediaPlayer2.Player", "Position", dbus.MakeVariant(UsFromDuration(pt.State.Duration)))
-		go ins.player.setProp("org.mpris.MediaPlayer2.Player", "Metadata", dbus.MakeVariant(MapFromTimer(pt)))
-	})
 	reply, err := ins.dbus.RequestName(ins.Name, dbus.NameFlagReplaceExisting)
 	if err != nil || reply != dbus.RequestNameReplyPrimaryOwner {
 		return err
 	}
+	ins.pt.Config.OnChange.Append(func(pt *timer.PomodoroTimer) {
+		go ins.player.setProp("org.mpris.MediaPlayer2.Player", "Position", dbus.MakeVariant(UsFromDuration(pt.State.Duration)))
+		go ins.player.setProp("org.mpris.MediaPlayer2.Player", "Metadata", dbus.MakeVariant(MapFromTimer(pt)))
+	})
 	return nil
 }

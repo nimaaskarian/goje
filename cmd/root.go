@@ -52,6 +52,7 @@ type AppConfig struct {
 	Version              bool          `mapstructure:"version,omitempty"`
 	Help                 bool          `mapstructure:"help,omitempty"`
 	Mpris                bool          `mapstructure:"mpris,omitempty"`
+	MprisNoInstance      bool          `mapstructure:"mpris-no-instance,omitempty"`
 	httpDaemon           *httpd.Daemon `mapstructure:"-"`
 }
 
@@ -102,6 +103,7 @@ func rootFlags() *pflag.FlagSet {
 	flagset.String("statefile", "", "path a file that goje writes its state on when quitting, and recovering it on startup")
 	flagset.String("ntfy-address", "", "address to ntfy server")
 	flagset.Bool("mpris", false, "run a MPRIS interface for goje")
+	flagset.Bool("mpris-no-instance", false, "don't append instance to MPRIS's name")
 	flagset.Bool("statefile-keep-updated", false, "keep state file updated; updating it on every kind of change (don't recommend this on a file on a SSD)")
 	return flagset
 }
@@ -267,7 +269,7 @@ func readConfig(cmd *cobra.Command) error {
 func setupDaemons(t *timer.PomodoroTimer) error {
 	slog.Info("setting up daemons...")
 	if config.Mpris {
-		i, err := mpris.NewInstance(t)
+		i, err := mpris.NewInstance(t, config.MprisNoInstance)
 		if err != nil {
 			return err
 		}
