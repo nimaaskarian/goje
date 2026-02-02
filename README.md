@@ -63,7 +63,7 @@ version in [releases](https://github.com/nimaaskarian/goje/releases).
 ## Features
 
 ### ActivityWatch
-You can turn on the activitywatch watcher using the config option `activitywatch` (`--activitywatch` cli argument) 
+You can turn on the activitywatch watcher using the config option `activitywatch = true` (`--activitywatch` cli argument) 
 ![activitywatch bucket](https://github.com/user-attachments/assets/3bd1ffc6-1cc7-4a6a-a110-728ee1823507)
 
 ### Webgui
@@ -72,13 +72,21 @@ webgui is intuitive and easy to use. its run by default, and opens in your brows
 
 
 #### Custom css
-if you don't like the default style of goje webgui, you can use `--custom-css`
+if you don't like the default style of goje webgui, you can use the config option `custom-css = /path/to/style.css`(`--custom-css /path/to/style.css` cli argument)
 option and pass a custom css file to it. here's a
 [pywal-themed](https://github.com/nimaaskarian/goje/wiki/Pywal-integration) goje
 using this feature:
 
 ![pywal-themed goje using custom css](https://github.com/user-attachments/assets/d00fa5cd-ab5d-442f-a195-1b233283b896)
 
+### MPRIS
+you can use `mpris = true` config option (`--mpris` cli argument) to expose a
+MPRIS interface on your session dbus. this means you can control goje using a
+MPRIS interface, from your gnome bar, using playerctl, or using bluetooth
+devices and mpris-proxy. 
+
+thanks to [mpd-mpris](https://github.com/natsukagami/mpd-mpris) this feature. i
+shamelessly copied most of their code.
 
 ## Integration and customization
 checkout [wiki](https://github.com/nimaaskarian/goje/wiki) for more indepth
