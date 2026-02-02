@@ -22,7 +22,7 @@ func (d *Daemon) JsonRoutes() {
 		c.JSON(http.StatusOK, d.Timer)
 	})
 	d.engine.POST("/api/timer/pause", func(c *gin.Context) {
-		d.Timer.Pause()
+		d.Timer.TogglePause()
 		c.JSON(http.StatusOK, d.Timer)
 	})
 	d.engine.POST("/api/timer/reset", func(c *gin.Context) {

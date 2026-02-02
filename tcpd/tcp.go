@@ -93,16 +93,13 @@ command: %s
 func pauseCmd(timer *timer.PomodoroTimer, args []string) (string, error) {
 	switch len(args) {
 	case 1:
-		timer.Pause()
+		timer.TogglePause()
 	case 2:
-		var err error
-		timer.State.Paused, err = parseBool(args[1])
+		paused, err := parseBool(args[1])
 		if err != nil {
 			return "", err
 		}
-		if !timer.Config.OnSet.Run(timer) {
-			timer.Config.OnPause.Run(timer)
-		}
+		timer.Pause(paused)
 	default:
 		return "", TooManyArgsError{args[0]}
 	}

@@ -6,6 +6,7 @@ require (
 	github.com/fsnotify/fsnotify v1.8.0
 	github.com/gin-contrib/gzip v1.2.3
 	github.com/gin-gonic/gin v1.10.1
+	github.com/godbus/dbus/v5 v5.2.2
 	github.com/nimaaskarian/aw-go v0.1.17
 	github.com/r3labs/sse/v2 v2.10.0
 	github.com/spf13/cobra v1.9.1

@@ -16,6 +16,7 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/nimaaskarian/goje/activitywatch"
 	"github.com/nimaaskarian/goje/httpd"
+	"github.com/nimaaskarian/goje/mpris"
 	"github.com/nimaaskarian/goje/ntfy"
 	"github.com/nimaaskarian/goje/tcpd"
 	"github.com/nimaaskarian/goje/timer"
@@ -50,6 +51,7 @@ type AppConfig struct {
 	StatefileKeepUpdated bool          `mapstructure:"statefile-keep-updated,omitempty"`
 	Version              bool          `mapstructure:"version,omitempty"`
 	Help                 bool          `mapstructure:"help,omitempty"`
+	Mpris                bool          `mapstructure:"mpris,omitempty"`
 	httpDaemon           *httpd.Daemon `mapstructure:"-"`
 }
 
@@ -99,6 +101,7 @@ func rootFlags() *pflag.FlagSet {
 	flagset.String("keyfile", "", "path to ssl certificate's key file")
 	flagset.String("statefile", "", "path a file that goje writes its state on when quitting, and recovering it on startup")
 	flagset.String("ntfy-address", "", "address to ntfy server")
+	flagset.Bool("mpris", false, "run a MPRIS interface for goje")
 	flagset.Bool("statefile-keep-updated", false, "keep state file updated; updating it on every kind of change (don't recommend this on a file on a SSD)")
 	return flagset
 }
@@ -263,6 +266,13 @@ func readConfig(cmd *cobra.Command) error {
 
 func setupDaemons(t *timer.PomodoroTimer) error {
 	slog.Info("setting up daemons...")
+	if config.Mpris {
+		i, err := mpris.NewInstance(t)
+		if err != nil {
+			return err
+		}
+		go i.Start(context.Background())
+	}
 	if config.Fifo != "" {
 		slog.Info("using fifo", "path", config.Fifo)
 		utils.Mkfifo(config.Fifo)

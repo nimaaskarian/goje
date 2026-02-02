@@ -62,11 +62,15 @@ func (t *PomodoroTimer) Init() {
 	t.Config.OnInit.Run(t)
 }
 
-func (t *PomodoroTimer) Pause() {
-	t.State.Paused = !t.State.Paused
+func (t *PomodoroTimer) Pause(pauseValue bool) {
+	t.State.Paused = pauseValue
 	if !t.Config.OnSet.Run(t) {
 		t.Config.OnPause.Run(t)
 	}
+}
+
+func (t *PomodoroTimer) TogglePause() {
+	t.Pause(!t.State.Paused)
 }
 
 func (t *PomodoroTimer) SeekTo(duration time.Duration) {
