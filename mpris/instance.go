@@ -2,9 +2,10 @@ package mpris
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
-	"errors"
+	"time"
 
 	"github.com/godbus/dbus/v5"
 	"github.com/godbus/dbus/v5/introspect"
@@ -27,6 +28,7 @@ type Instance struct {
 	displayName string
 }
 
+type MetadataMap map[string]interface{}
 // NewInstance creates a new instance that takes care of the specified mpd.
 func NewInstance(pt *timer.PomodoroTimer) (ins *Instance, err error) {
 	ins = &Instance{
@@ -48,7 +50,7 @@ func NewInstance(pt *timer.PomodoroTimer) (ins *Instance, err error) {
 		"LoopStatus":     newProp(loopStatus, ins.player.OnLoopStatus),
 		"Rate":           newProp(1.0, notImplemented),
 		"Shuffle":        newProp(false, notImplemented),
-		"Metadata":       newProp("Goje", nil),
+		"Metadata":       newProp(MapFromTimer(pt), nil),
 		"Volume":         newProp(1.0, notImplemented),
 		"Position": {
 			Value:    UsFromDuration(pt.State.Duration),
@@ -73,6 +75,13 @@ func NewInstance(pt *timer.PomodoroTimer) (ins *Instance, err error) {
 	return
 }
 
+func MapFromTimer(pt *timer.PomodoroTimer) MetadataMap {
+	return MetadataMap{
+		"mpris:trackid": dbus.ObjectPath(fmt.Sprintf("/org/goje/Mode/%d", pt.State.Mode)),
+		"mpris:length":  pt.State.Duration / time.Microsecond,
+	}
+}
+
 func notImplemented(c *prop.Change) *dbus.Error {
 	return dbus.MakeFailedError(errors.New("Not implemented"))
 }
@@ -85,6 +94,7 @@ func (ins *Instance) Start(ctx context.Context) error {
 
 	ins.pt.Config.OnChange.Append(func(pt *timer.PomodoroTimer) {
 		go ins.player.setProp("org.mpris.MediaPlayer2.Player", "Position", dbus.MakeVariant(UsFromDuration(pt.State.Duration)))
+		go ins.player.setProp("org.mpris.MediaPlayer2.Player", "Metadata", dbus.MakeVariant(MapFromTimer(pt)))
 	})
 	reply, err := ins.dbus.RequestName(ins.Name, dbus.NameFlagReplaceExisting)
 	if err != nil || reply != dbus.RequestNameReplyPrimaryOwner {
