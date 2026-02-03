@@ -8,23 +8,23 @@ import (
 )
 
 func TestCycleMode(t *testing.T) {
-	timer := PomodoroTimer{
+	pt := PomodoroTimer{
 		Config: &DefaultConfig,
 	}
-	timer.Init()
+	pt.Init()
 	for range 3 {
-		timer.SwitchNextMode()
-		if timer.State.Mode != ShortBreak {
+		pt.SwitchNextMode()
+		if pt.State.Mode != ShortBreak {
 			t.Fatal("Failed cycle mode short break")
 		}
-		timer.SwitchNextMode()
-		if timer.State.Mode != Pomodoro {
+		pt.SwitchNextMode()
+		if pt.State.Mode != Pomodoro {
 			t.Fatal("Failed cycle mode to pomodoro")
 		}
 	}
-	timer.SwitchNextMode()
-	if timer.State.Mode != LongBreak {
-		t.Fatal("Failed cycle mode to long break", timer.State.Mode)
+	pt.SwitchNextMode()
+	if pt.State.Mode != LongBreak {
+		t.Fatal("Failed cycle mode to long break", pt.State.Mode)
 	}
 }
 

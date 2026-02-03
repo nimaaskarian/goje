@@ -2,6 +2,7 @@ package timer
 
 import (
 	"context"
+	"log"
 	"log/slog"
 	"strings"
 	"time"
@@ -9,10 +10,10 @@ import (
 
 const VERSION = "v0.5.1"
 
-type TimerMode int
+type PomodoroTimerMode int
 
 const (
-	Pomodoro TimerMode = iota
+	Pomodoro PomodoroTimerMode = iota
 	ShortBreak
 	LongBreak
 	MODE_MAX
@@ -20,7 +21,7 @@ const (
 
 type PomodoroTimerState struct {
 	Duration         time.Duration
-	Mode             TimerMode
+	Mode             PomodoroTimerMode
 	FinishedSessions uint
 	Paused           bool
 }
@@ -37,140 +38,140 @@ type PomodoroTimer struct {
 	State  PomodoroTimerState
 }
 
-func (t *PomodoroTimer) Reset() {
-	slog.Info("timer reseted.", "new time", t.Config.Duration[t.State.Mode].String())
-	t.SeekTo(t.Config.Duration[t.State.Mode])
-	if !t.Config.OnSet.Run(t) {
-		t.Config.OnChange.RunSync(t)
+func (pt *PomodoroTimer) Reset() {
+	slog.Info("timer reseted.", "new time", pt.Config.Duration[pt.State.Mode].String())
+	pt.SeekTo(pt.Config.Duration[pt.State.Mode])
+	if !pt.Config.OnSet.Run(pt) {
+		pt.Config.OnChange.RunSync(pt)
 	}
-	if t.State.Paused {
-		t.Config.OnPause.OnEventOnce = []func(*PomodoroTimer){func(t *PomodoroTimer) {
-			if !t.State.Paused && !t.Config.OnSet.Run(t) {
-				t.Config.OnModeStart.Run(t)
+	if pt.State.Paused {
+		pt.Config.OnPause.OnEventOnce = []func(*PomodoroTimer){func(pt *PomodoroTimer) {
+			if !pt.State.Paused && !pt.Config.OnSet.Run(pt) {
+				pt.Config.OnModeStart.Run(pt)
 			}
 		}}
-	} else if !t.Config.OnSet.Run(t) {
-		t.Config.OnModeStart.Run(t)
+	} else if !pt.Config.OnSet.Run(pt) {
+		pt.Config.OnModeStart.Run(pt)
 	}
 }
 
-func (t *PomodoroTimer) Init() {
-	t.State.Mode = Pomodoro
-	t.State.FinishedSessions = 0
-	t.State.Paused = t.Config.Paused
-	t.Reset()
-	t.Config.OnInit.Run(t)
+func (pt *PomodoroTimer) Init() {
+	pt.State.Mode = Pomodoro
+	pt.State.FinishedSessions = 0
+	pt.State.Paused = pt.Config.Paused
+	pt.Reset()
+	pt.Config.OnInit.Run(pt)
 }
 
-func (t *PomodoroTimer) Pause(pauseValue bool) {
-	t.State.Paused = pauseValue
-	if !t.Config.OnSet.Run(t) {
-		t.Config.OnPause.Run(t)
+func (pt *PomodoroTimer) Pause(pauseValue bool) {
+	pt.State.Paused = pauseValue
+	if !pt.Config.OnSet.Run(pt) {
+		pt.Config.OnPause.Run(pt)
 	}
 }
 
-func (t *PomodoroTimer) TogglePause() {
-	t.Pause(!t.State.Paused)
+func (pt *PomodoroTimer) TogglePause() {
+	pt.Pause(!pt.State.Paused)
 }
 
-func (t *PomodoroTimer) SeekTo(duration time.Duration) {
-	t.State.Duration = duration
-	if !t.Config.OnSet.Run(t) {
-		t.Config.OnChange.Run(t)
+func (pt *PomodoroTimer) SeekTo(duration time.Duration) {
+	pt.State.Duration = duration
+	if !pt.Config.OnSet.Run(pt) {
+		pt.Config.OnChange.Run(pt)
 	}
 }
 
-func (t *PomodoroTimer) SeekAdd(duration time.Duration) {
-	new_duration := t.State.Duration + duration
+func (pt *PomodoroTimer) SeekAdd(duration time.Duration) {
+	new_duration := pt.State.Duration + duration
 	if new_duration < 0 {
-		t.SeekTo(0)
+		pt.SeekTo(0)
 	} else {
-		t.SeekTo(new_duration)
+		pt.SeekTo(new_duration)
 	}
 }
 
-func (t *PomodoroTimer) beforeTick() {
-	if t.State.Duration <= 0 {
-		// timer before executing OnModeRun, so SwitchNextMode wouldn't
+func (pt *PomodoroTimer) beforeTick() {
+	if pt.State.Duration <= 0 {
+		// timer before executing OnModeRun, so SwitchNextMode wouldn'pt
 		// change the timer reference during the call.
-		t_copy := *t
-		t.Config.OnModeEnd.Run(&t_copy)
-		t.SwitchNextMode()
+		t_copy := *pt
+		pt.Config.OnModeEnd.Run(&t_copy)
+		pt.SwitchNextMode()
 	}
 }
 
-func (t *PomodoroTimer) tick() {
-	if t.State.Paused {
+func (pt *PomodoroTimer) tick() {
+	if pt.State.Paused {
 		return
 	}
-	t.State.Duration -= t.Config.DurationPerTick
-	t.Config.OnChange.Run(t)
+	pt.State.Duration -= pt.Config.DurationPerTick
+	pt.Config.OnChange.Run(pt)
 }
 
 // Halts the current thread until ctx is Done. Use in a goroutine.
-func (t *PomodoroTimer) Loop(ctx context.Context) {
+func (pt *PomodoroTimer) Loop(ctx context.Context) {
 	slog.Info("timer loop started")
-	timer := time.NewTimer(t.Config.DurationPerTick)
+	timer := time.NewTimer(pt.Config.DurationPerTick)
 	for {
-		t.beforeTick()
+		pt.beforeTick()
 		select {
 		case <-ctx.Done():
 			return
 		case <-timer.C:
-			t.tick()
-			timer.Reset(t.Config.DurationPerTick)
+			pt.tick()
+			timer.Reset(pt.Config.DurationPerTick)
 		}
 	}
 }
 
-func (t *PomodoroTimer) SwitchNextMode() {
-	switch t.State.Mode {
+func (pt *PomodoroTimer) SwitchNextMode() {
+	switch pt.State.Mode {
 	case Pomodoro:
-		t.State.FinishedSessions++
-		if t.State.FinishedSessions >= t.Config.Sessions {
-			t.State.Mode = LongBreak
+		pt.State.FinishedSessions++
+		if pt.State.FinishedSessions >= pt.Config.Sessions {
+			pt.State.Mode = LongBreak
 		} else {
-			t.State.Mode = ShortBreak
+			pt.State.Mode = ShortBreak
 		}
 	case LongBreak:
-		t.Init()
+		pt.Init()
 		return
 	case ShortBreak:
-		t.State.Mode = Pomodoro
+		pt.State.Mode = Pomodoro
 	}
-	t.Reset()
+	pt.Reset()
 }
 
-func (t *PomodoroTimer) SwitchPrevMode() {
-	switch t.State.Mode {
+func (pt *PomodoroTimer) SwitchPrevMode() {
+	switch pt.State.Mode {
 	case Pomodoro:
-		if t.State.FinishedSessions == 0 {
-			t.State.FinishedSessions = t.Config.Sessions
-			t.State.Mode = LongBreak
+		if pt.State.FinishedSessions == 0 {
+			pt.State.FinishedSessions = pt.Config.Sessions
+			pt.State.Mode = LongBreak
 		} else {
-			t.State.Mode = ShortBreak
+			pt.State.Mode = ShortBreak
 		}
 	case LongBreak:
-		if t.State.FinishedSessions > 0 {
-			t.State.FinishedSessions--
+		if pt.State.FinishedSessions > 0 {
+			pt.State.FinishedSessions--
 		}
-		t.State.Mode = Pomodoro
+		pt.State.Mode = Pomodoro
 	case ShortBreak:
-		if t.State.FinishedSessions > 0 {
-			t.State.FinishedSessions--
+		if pt.State.FinishedSessions > 0 {
+			pt.State.FinishedSessions--
 		}
-		t.State.Mode = Pomodoro
+		pt.State.Mode = Pomodoro
 	}
-	t.Reset()
+	pt.Reset()
 }
 
-func (t *PomodoroTimer) String() string {
-	rounded := t.State.Duration.Round(time.Second)
+func (pt *PomodoroTimer) String() string {
+	rounded := pt.State.Duration.Round(time.Second)
 	return rounded.String()
 }
 
-func (tm TimerMode) String() string {
-	switch tm {
+func (ptm PomodoroTimerMode) String() string {
+	switch ptm {
 	case Pomodoro:
 		return "Pomodoro"
 	case ShortBreak:
@@ -178,13 +179,14 @@ func (tm TimerMode) String() string {
 	case LongBreak:
 		return "Long Break"
 	}
-	return "unknown"
+	log.Fatalf("Invalid pomodoro timer mode %d\n", ptm)
+	return ""
 }
 
-func (tm TimerMode) SnakeCase() string {
-	return strings.ReplaceAll(strings.ToLower(tm.String()), " ", "_")
+func (ptm PomodoroTimerMode) SnakeCase() string {
+	return strings.ReplaceAll(strings.ToLower(ptm.String()), " ", "_")
 }
 
-func (tm TimerMode) WormCase() string {
-	return strings.ReplaceAll(strings.ToLower(tm.String()), " ", "-")
+func (ptm PomodoroTimerMode) WormCase() string {
+	return strings.ReplaceAll(strings.ToLower(ptm.String()), " ", "-")
 }
