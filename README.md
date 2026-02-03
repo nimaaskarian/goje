@@ -88,6 +88,16 @@ devices and mpris-proxy.
 thanks to [mpd-mpris](https://github.com/natsukagami/mpd-mpris) this feature. i
 shamelessly copied most of their code.
 
+
+### Ntfy
+you can use `ntfy-address = http://some.ntfy.server/some-topic` (`--ntfy-address
+http://some.ntfy.server/some-topic` cli argument) to send notifications directly
+to a ntfy server.
+
+you can also use `ntfy-auth = username:password` (`--ntfy-auth
+username:password` cli argument) to specify username and password for your
+password protected topic.
+
 ## Integration and customization
 checkout [wiki](https://github.com/nimaaskarian/goje/wiki) for more indepth
 configuration options.

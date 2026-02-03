@@ -47,6 +47,7 @@ type AppConfig struct {
 	Keyfile              string        `mapstructure:"keyfile,omitempty"`
 	Statefile            string        `mapstructure:"statefile,omitempty"`
 	NtfyAddress          string        `mapstructure:"ntfy-address,omitempty"`
+	NtfyAuth             string        `mapstructure:"ntfy-auth,omitempty"`
 	StatefileKeepUpdated bool          `mapstructure:"statefile-keep-updated,omitempty"`
 	Version              bool          `mapstructure:"version,omitempty"`
 	Help                 bool          `mapstructure:"help,omitempty"`
@@ -86,7 +87,8 @@ func rootFlags() *pflag.FlagSet {
 	flagset.String("certfile", "", "path to ssl certificate's cert file")
 	flagset.String("keyfile", "", "path to ssl certificate's key file")
 	flagset.String("statefile", "", "path a file that goje writes its state on when quitting, and recovering it on startup")
-	flagset.String("ntfy-address", "", "address to ntfy server")
+	flagset.String("ntfy-address", "", "address to ntfy topic")
+	flagset.String("ntfy-auth", "", "username:password to access ntfy topic")
 	flagset.Bool("mpris", false, "run a MPRIS interface for goje")
 	flagset.Bool("mpris-no-instance", false, "don't append instance to MPRIS's name")
 	flagset.Bool("statefile-keep-updated", false, "keep state file updated; updating it on every kind of change (don't recommend this on a file on a SSD)")
@@ -298,7 +300,7 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 		config.Timer.OnModeStart.Append(writeToFifo)
 	}
 	if config.NtfyAddress != "" {
-		ntfy.Setup(config.NtfyAddress, config.Timer)
+		ntfy.Setup(config.NtfyAddress, config.NtfyAuth, config.Timer)
 	}
 	if config.Statefile != "" {
 		slog.Debug("appending statefile")

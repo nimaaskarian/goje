@@ -1,6 +1,7 @@
 package ntfy
 
 import (
+	"encoding/base64"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -9,10 +10,10 @@ import (
 	"github.com/nimaaskarian/goje/utils"
 )
 
-func Setup(ntfyAddress string, timerConfig timer.TimerConfig) {
+func Setup(ntfyAddress string, ntfyAuth string, timerConfig timer.TimerConfig) {
 	ntfyAddress = utils.FixHttpAddress(ntfyAddress)
 	timerConfig.OnInit.Append((func(pt *timer.PomodoroTimer) {
-		if req, err := ntfyRequest(ntfyAddress, "Timer init!", "tomato,arrow_forward"); err == nil {
+		if req, err := ntfyRequest(ntfyAddress, ntfyAuth, "Timer init!", "tomato,arrow_forward"); err == nil {
 			if _, err := http.DefaultClient.Do(req); err != nil {
 				slog.Error("Failed to send ntfy request", "err", err)
 			}
@@ -31,7 +32,7 @@ func Setup(ntfyAddress string, timerConfig timer.TimerConfig) {
 			msg = "Long break!"
 			tags = "tropical_drink"
 		}
-		if req, err := ntfyRequest(ntfyAddress, msg, tags); err == nil {
+		if req, err := ntfyRequest(ntfyAddress, ntfyAuth, msg, tags); err == nil {
 			if _, err := http.DefaultClient.Do(req); err != nil {
 				slog.Error("Failed to send ntfy request", "err", err)
 			}
@@ -46,7 +47,7 @@ func Setup(ntfyAddress string, timerConfig timer.TimerConfig) {
 			msg = "Timer unpaused!"
 			tags = "arrow_forward"
 		}
-		if req, err := ntfyRequest(ntfyAddress, msg, tags); err == nil {
+		if req, err := ntfyRequest(ntfyAddress, ntfyAuth, msg, tags); err == nil {
 			if _, err := http.DefaultClient.Do(req); err != nil {
 				slog.Error("Failed to send ntfy request", "err", err)
 			}
@@ -55,7 +56,7 @@ func Setup(ntfyAddress string, timerConfig timer.TimerConfig) {
 	if timerConfig.Paused {
 		timerConfig.OnModeEnd.Append((func(pt *timer.PomodoroTimer) {
 			if pt.State.Mode == 2 {
-				if req, err := ntfyRequest(ntfyAddress, "Long break ended!", "tomato"); err == nil {
+				if req, err := ntfyRequest(ntfyAddress, ntfyAuth, "Long break ended!", "tomato"); err == nil {
 					if _, err := http.DefaultClient.Do(req); err != nil {
 						slog.Error("Failed to send ntfy request", "err", err)
 					}
@@ -66,11 +67,14 @@ func Setup(ntfyAddress string, timerConfig timer.TimerConfig) {
 }
 
 // helper function that creates a request
-func ntfyRequest(address, content, tags string) (*http.Request, error) {
+func ntfyRequest(address, auth, content, tags string) (*http.Request, error) {
 	req, err := http.NewRequest("POST", address, strings.NewReader(content))
 	if err != nil {
 		slog.Error("Failed to create ntfy request", "err", err)
 		return nil, err
+	}
+	if auth != "" {
+		req.Header.Set("Authorization", "Basic " + base64.StdEncoding.EncodeToString([]byte(auth)))
 	}
 	req.Header.Set("Tags", tags)
 	return req, nil
