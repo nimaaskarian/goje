@@ -71,7 +71,7 @@ webgui is intuitive and easy to use. its run by default, and opens in your brows
 ![goje dark mode](https://github.com/user-attachments/assets/a31a8e00-22b6-4b6f-87a1-4a7bc8e0851e)
 
 
-#### Custom css
+### Custom css
 if you don't like the default style of goje webgui, you can use the config option `custom-css = /path/to/style.css`(`--custom-css /path/to/style.css` cli argument)
 option and pass a custom css file to it. here's a
 [pywal-themed](https://github.com/nimaaskarian/goje/wiki/Pywal-integration) goje
@@ -97,6 +97,18 @@ to a ntfy server.
 you can also use `ntfy-auth = username:password` (`--ntfy-auth
 username:password` cli argument) to specify username and password for your
 password protected topic.
+
+
+### Client (inbound server mirroring outbound server)
+goje using its client subcommand `goje client` can mirror an outbound server
+and run an inbound server. this way any action done to any of the servers are
+reflected in all clients (including other inbound servers using either of these
+servers as an outbound).
+
+a `goje client` can get all options implemented for `goje` server itself. in
+addition to a required `--outbound-address https://some.goje-server.org` which
+specifies the outbound goje's http(s) server. the server maybe proxied behind
+nginx or some sort of a webserver (`https://some.server.org/goje` for example)
 
 ## Integration and customization
 checkout [wiki](https://github.com/nimaaskarian/goje/wiki) for more indepth
