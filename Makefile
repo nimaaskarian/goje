@@ -48,5 +48,5 @@ uninstall:
 	rm ${BIN_DIR}/goje ${SERVICE_FILE}
 
 clean:
-	rm ${ALL}
+	rm coverage.out goje
 	rm -r ${WEBGUI}
