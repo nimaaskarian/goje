@@ -86,6 +86,8 @@ func MapFromTimer(pt *timer.PomodoroTimer) MetadataMap {
 	return MetadataMap{
 		"mpris:trackid": dbus.ObjectPath(fmt.Sprintf("/org/goje/Mode/%d", pt.State.Mode)),
 		"mpris:length":  pt.State.Duration / time.Microsecond,
+		"xesam:title": pt.State.Mode.String(),
+		"xesam:artist": "",
 	}
 }
 
