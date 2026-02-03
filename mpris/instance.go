@@ -29,6 +29,7 @@ type Instance struct {
 }
 
 type MetadataMap map[string]any
+
 // NewInstance creates a new instance that takes care of the specified mpd.
 // no_instance = true means run the dbus on goje instead of goje.instance<pid>
 func NewInstance(pt *timer.PomodoroTimer, no_instance bool) (ins *Instance, err error) {
@@ -86,8 +87,8 @@ func MapFromTimer(pt *timer.PomodoroTimer) MetadataMap {
 	return MetadataMap{
 		"mpris:trackid": dbus.ObjectPath(fmt.Sprintf("/org/goje/Mode/%d", pt.State.Mode)),
 		"mpris:length":  pt.State.Duration / time.Microsecond,
-		"xesam:title": pt.State.Mode.String(),
-		"xesam:artist": "",
+		"xesam:title":   pt.State.Mode.String(),
+		"xesam:artist":  "",
 	}
 }
 

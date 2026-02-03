@@ -56,9 +56,9 @@ type AppConfig struct {
 }
 
 // objects that define a path. later used for utils.ExpandUser to get applied on all paths
-var path_objects = []string {
+var path_objects = []string{
 	"fifo", "certfile", "keyfile", "statefile", "custom-css",
-};
+}
 
 var ctx context.Context
 var cancel context.CancelFunc

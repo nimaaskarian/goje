@@ -1,13 +1,14 @@
 package cmd
 
 import (
-	"log/slog"
 	"errors"
+	"log/slog"
 
 	"github.com/spf13/cobra"
 )
 
 type LogLevel slog.Level
+
 var loglevel = LogLevel(slog.LevelError)
 
 func (level *LogLevel) Set(v string) error {
@@ -26,7 +27,7 @@ func (level *LogLevel) Set(v string) error {
 	return nil
 }
 
-func (level * LogLevel) String() string {
+func (level *LogLevel) String() string {
 	switch *level {
 	case LogLevel(slog.LevelWarn):
 		return "warn"
@@ -40,7 +41,7 @@ func (level * LogLevel) String() string {
 	return ""
 }
 
-func (level * LogLevel) Type() string {
+func (level *LogLevel) Type() string {
 	return "loglevel"
 }
 

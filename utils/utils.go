@@ -47,10 +47,10 @@ func FixHttpAddress(address string) string {
 	}
 }
 
-type ExpandUser struct  {
-	home string;
-	sep string;
-	tilde_sep string;
+type ExpandUser struct {
+	home      string
+	sep       string
+	tilde_sep string
 }
 
 // create inner expanduser cache
