@@ -46,3 +46,34 @@ func FixHttpAddress(address string) string {
 		return "http://" + address
 	}
 }
+
+type ExpandUser struct  {
+	home string;
+	sep string;
+	tilde_sep string;
+}
+
+// create inner expanduser cache
+func NewExpandUser() (*ExpandUser, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, err
+	}
+	sep := string(os.PathSeparator)
+	return &ExpandUser{
+		home,
+		sep,
+		"~" + sep,
+	}, nil
+}
+
+// apply expanduser on a path
+func (eu *ExpandUser) Expand(path string) string {
+	if !strings.HasPrefix(path, eu.tilde_sep) {
+		if path == "~" {
+			return eu.home
+		}
+		return path
+	}
+	return eu.home + eu.sep + path[len(eu.tilde_sep):]
+}

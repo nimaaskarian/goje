@@ -3,7 +3,6 @@ package cmd
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -56,29 +55,15 @@ type AppConfig struct {
 	httpDaemon           *httpd.Daemon `mapstructure:"-"`
 }
 
+// objects that define a path. later used for utils.ExpandUser to get applied on all paths
+var path_objects = []string {
+	"fifo", "certfile", "keyfile", "statefile", "custom-css",
+};
+
 var ctx context.Context
 var cancel context.CancelFunc
 
-type LogLevel slog.Level
-
-func (level *LogLevel) Set(v string) error {
-	switch v {
-	case "warning", "warn":
-		*level = LogLevel(slog.LevelWarn)
-	case "info":
-		*level = LogLevel(slog.LevelInfo)
-	case "debug":
-		*level = LogLevel(slog.LevelDebug)
-	case "error", "":
-		*level = LogLevel(slog.LevelError)
-	default:
-		return errors.New(`loglevel must be one of "info", "warn", "debug, or "error"`)
-	}
-	return nil
-}
-
 var config = AppConfig{Timer: timer.DefaultConfig}
-var loglevel LogLevel
 
 // flags that are shared between client and root
 func rootFlags() *pflag.FlagSet {
@@ -113,10 +98,8 @@ func init() {
 	rootCmd.MarkFlagsMutuallyExclusive("paused", "not-paused")
 
 	rootCmd.PersistentFlags().StringVarP(&config_file, "config", "c", "", "path to config file. uses default if not specified")
-	rootCmd.PersistentFlags().String("loglevel", "error", "log level of goje")
-	rootCmd.RegisterFlagCompletionFunc("loglevel", func(cmd *cobra.Command, args []string, to_complete string) ([]cobra.Completion, cobra.ShellCompDirective) {
-		return []string{"error", "warn", "debug", "info"}, cobra.ShellCompDirectiveNoFileComp
-	})
+	rootCmd.PersistentFlags().Var(&loglevel, "loglevel", "log level of goje")
+	rootCmd.RegisterFlagCompletionFunc("loglevel", logLevelCompletion)
 }
 
 var rootCmd = &cobra.Command{
@@ -232,6 +215,15 @@ func readConfig(cmd *cobra.Command) error {
 			return err
 		}
 		slog.Debug("default config not found. using the default values")
+	}
+	expanduser, err := utils.NewExpandUser()
+	if err != nil {
+		slog.Error("failed to initialize expanduser. probably couldn't find home directory")
+	} else {
+		for _, path_object := range path_objects {
+			expanded := expanduser.Expand(viper.GetString(path_object))
+			viper.Set(path_object, expanded)
+		}
 	}
 	viper.SetEnvPrefix("goje")
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
