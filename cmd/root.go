@@ -54,6 +54,7 @@ type AppConfig struct {
 	Mpris                bool          `mapstructure:"mpris,omitempty"`
 	MprisNoInstance      bool          `mapstructure:"mpris-no-instance,omitempty"`
 	httpDaemon           *httpd.Daemon `mapstructure:"-"`
+	webguiAddress        string        `mapstructure:"-"`
 }
 
 // objects that define a path. later used for utils.ExpandUser to get applied on all paths
@@ -262,13 +263,6 @@ func readConfig(cmd *cobra.Command) error {
 
 func setupDaemons(t *timer.PomodoroTimer) error {
 	slog.Info("setting up daemons...")
-	if config.Mpris {
-		i, err := mpris.NewInstance(t, config.MprisNoInstance)
-		if err != nil {
-			return err
-		}
-		go i.Start(context.Background())
-	}
 	if config.Fifo != "" {
 		slog.Info("using fifo", "path", config.Fifo)
 		utils.Mkfifo(config.Fifo)
@@ -361,9 +355,19 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 		config.httpDaemon.SetupEvents()
 		config.httpDaemon.JsonRoutes()
 		if !config.NoWebgui {
-			go runWebgui(config.HttpAddress)
+			runWebgui(config.HttpAddress)
 		}
 		go config.httpDaemon.Run(config.HttpAddress, config.Certfile, config.Keyfile, ctx)
+	}
+	if config.Mpris {
+		instance, err := mpris.NewInstance(t, &mpris.InstanceOpts {NoInstance: config.MprisNoInstance, WebguiAddress: config.webguiAddress})
+		if err != nil {
+			return err
+		}
+		instance.Start(ctx)
+		config.Timer.OnQuit.Append(func(pt *timer.PomodoroTimer) {
+			instance.Close()
+		})
 	}
 	return nil
 }
@@ -372,7 +376,9 @@ func runWebgui(address string) {
 	slog.Debug("setting up webgui routes")
 	config.httpDaemon.WebguiRoutes(config.CustomCss)
 	if !config.NoOpenBrowser {
-		utils.OpenURL(utils.FixHttpAddress(address))
+		// set webguiAddress used in mpris raise
+		config.webguiAddress = address
+		go utils.OpenURL(utils.FixHttpAddress(address))
 	}
 }
 

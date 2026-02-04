@@ -23,25 +23,28 @@ type Instance struct {
 	player *Player
 	props  *prop.Properties
 
-	Name string
+	name string
 
 	displayName string
 }
 
 type MetadataMap map[string]any
 
-// NewInstance creates a new instance that takes care of the specified mpd.
-// no_instance = true means run the dbus on goje instead of goje.instance<pid>
-func NewInstance(pt *timer.PomodoroTimer, no_instance bool) (ins *Instance, err error) {
+type InstanceOpts struct {
+	NoInstance bool;
+	WebguiAddress string;
+}
+
+func NewInstance(pt *timer.PomodoroTimer, opts *InstanceOpts) (ins *Instance, err error) {
 	var name string
-	if no_instance {
+	if opts.NoInstance {
 		name = "org.mpris.MediaPlayer2.goje"
 	} else {
 		name = fmt.Sprintf("org.mpris.MediaPlayer2.goje.instance%d", os.Getpid())
 	}
 	ins = &Instance{
 		pt:          pt,
-		Name:        name,
+		name:        name,
 		displayName: "Goje",
 	}
 
@@ -49,7 +52,7 @@ func NewInstance(pt *timer.PomodoroTimer, no_instance bool) (ins *Instance, err 
 		return nil, err
 	}
 
-	ins.root = &MediaPlayer2{Instance: ins}
+	ins.root = &MediaPlayer2{Instance: ins, webguiAddress: opts.WebguiAddress}
 	ins.player = &Player{Instance: ins}
 	playStatus := PlaybackStatusFromPomodoroTimer(pt)
 	loopStatus := LoopStatusFromPomodoroTimer(pt)
@@ -57,9 +60,9 @@ func NewInstance(pt *timer.PomodoroTimer, no_instance bool) (ins *Instance, err 
 		"PlaybackStatus": newProp(playStatus, nil),
 		"LoopStatus":     newProp(loopStatus, ins.player.OnLoopStatus),
 		"Rate":           newProp(1.0, notImplemented),
-		"Shuffle":        newProp(false, notImplemented),
+		"Shuffle":        newProp(false, ins.player.OnShuffle),
 		"Metadata":       newProp(MapFromTimer(pt), nil),
-		"Volume":         newProp(1.0, notImplemented),
+		"Volume":         newProp(1.0, ins.player.OnVolume),
 		"Position": {
 			Value:    UsFromDuration(pt.State.Duration),
 			Writable: true,
@@ -83,12 +86,12 @@ func NewInstance(pt *timer.PomodoroTimer, no_instance bool) (ins *Instance, err 
 	return
 }
 
+// DON'T PUT EMPTY STRING IN THE MAP. results in error
 func MapFromTimer(pt *timer.PomodoroTimer) MetadataMap {
 	return MetadataMap{
 		"mpris:trackid": dbus.ObjectPath(fmt.Sprintf("/org/goje/Mode/%d", pt.State.Mode)),
 		"mpris:length":  pt.State.Duration / time.Microsecond,
 		"xesam:title":   pt.State.Mode.String(),
-		"xesam:artist":  "",
 	}
 }
 
@@ -102,13 +105,17 @@ func (ins *Instance) Start(ctx context.Context) error {
 	ins.dbus.Export(ins.player, "/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player")
 	ins.dbus.Export(introspect.NewIntrospectable(ins.IntrospectNode()), "/org/mpris/MediaPlayer2", "org.freedesktop.DBus.Introspectable")
 
-	reply, err := ins.dbus.RequestName(ins.Name, dbus.NameFlagReplaceExisting)
+	reply, err := ins.dbus.RequestName(ins.name, dbus.NameFlagReplaceExisting)
 	if err != nil || reply != dbus.RequestNameReplyPrimaryOwner {
 		return err
 	}
 	ins.pt.Config.OnChange.Append(func(pt *timer.PomodoroTimer) {
-		go ins.player.setProp("org.mpris.MediaPlayer2.Player", "Position", dbus.MakeVariant(UsFromDuration(pt.State.Duration)))
-		go ins.player.setProp("org.mpris.MediaPlayer2.Player", "Metadata", dbus.MakeVariant(MapFromTimer(pt)))
+		ins.player.setProp("org.mpris.MediaPlayer2.Player", "Position", dbus.MakeVariant(UsFromDuration(pt.State.Duration)))
+		ins.player.setProp("org.mpris.MediaPlayer2.Player", "Metadata", dbus.MakeVariant(MapFromTimer(pt)))
 	})
 	return nil
+}
+
+func (ins *Instance) Close() error {
+	return ins.dbus.Close()
 }

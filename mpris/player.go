@@ -5,7 +5,6 @@
 package mpris
 
 import (
-	"errors"
 	"log/slog"
 	"time"
 
@@ -15,29 +14,7 @@ import (
 	"github.com/nimaaskarian/goje/timer"
 )
 
-type MediaPlayer2 struct {
-	*Instance
-}
-
-func (m *MediaPlayer2) properties() map[string]*prop.Prop {
-
-	return map[string]*prop.Prop{
-		"CanQuit":      newProp(false, nil),         // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:CanQuit
-		"CanRaise":     newProp(false, nil),         // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:CanRaise
-		"HasTrackList": newProp(false, nil),         // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:HasTrackList
-		"Identity":     newProp(m.displayName, nil), // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:Identity
-		"DesktopEntry": newProp("goje", nil),        // doesn't actually exist
-
-		"Fullscreen":       newProp(false, nil),
-		"CanSetFullscreen": newProp(false, nil),
-
-		// Empty because we can't add arbitary files in...
-		"SupportedUriSchemes": newProp([]string{}, nil), // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:SupportedUriSchemes
-		"SupportedMimeTypes":  newProp([]string{}, nil), // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Property:SupportedMimeTypes
-	}
-}
-
-func newProp(value interface{}, cb func(*prop.Change) *dbus.Error) *prop.Prop {
+func newProp(value any, cb func(*prop.Change) *dbus.Error) *prop.Prop {
 	return &prop.Prop{
 		Value:    value,
 		Writable: true,
@@ -45,6 +22,15 @@ func newProp(value interface{}, cb func(*prop.Change) *dbus.Error) *prop.Prop {
 		Callback: cb,
 	}
 }
+
+func (p *Player) OnShuffle(c *prop.Change) *dbus.Error {
+	return nil
+}
+
+func (p *Player) OnVolume(c *prop.Change) *dbus.Error {
+	return nil
+}
+
 
 func (p *Player) setProp(iface, name string, value dbus.Variant) {
 	if err := p.Instance.props.Set(iface, name, value); err != nil {
@@ -115,7 +101,7 @@ func (p *Player) OnLoopStatus(c *prop.Change) *dbus.Error {
 	case LoopStatusPlaylist:
 		p.pt.Config.Paused = false
 	case LoopStatusTrack:
-		return dbus.MakeFailedError(errors.New("not implemented"))
+		p.pt.Config.Paused = false
 	}
 	return nil
 }
@@ -187,4 +173,9 @@ func (p *Player) SetPosition(o TrackID, x TimeInUs) *dbus.Error {
 	slog.Info("set-position recieved from mpris", "duration", x.Duration())
 	p.pt.SeekTo(x.Duration())
 	return nil
+}
+
+// Emit the Seeked DBus signal.
+func (p *Player) Seeked(x TimeInUs) *dbus.Error {
+	return dbus.MakeFailedError(p.dbus.Emit("/org/mpris/MediaPlayer2", "org.mpris.MediaPlayer2.Player.Seeked", x))
 }
