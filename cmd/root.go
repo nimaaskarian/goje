@@ -223,7 +223,7 @@ func readConfig(cmd *cobra.Command) error {
 	if err != nil {
 		slog.Error("failed to initialize expanduser. probably couldn't find home directory")
 	} else {
-		for _, path_object := range path_objects {
+		for _, path_object := range filename_fields {
 			expanded := expanduser.Expand(viper.GetString(path_object))
 			viper.Set(path_object, expanded)
 		}
@@ -360,7 +360,7 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 		go config.httpDaemon.Run(config.HttpAddress, config.Certfile, config.Keyfile, ctx)
 	}
 	if config.Mpris {
-		instance, err := mpris.NewInstance(t, &mpris.InstanceOpts{NoInstance: config.MprisNoInstance, WebguiAddress: config.webguiAddress})
+		instance, err := mpris.NewInstance(t, &mpris.InstanceOpts {NoInstance: config.MprisNoInstance, WebguiAddress: config.webguiAddress})
 		if err != nil {
 			return err
 		}
