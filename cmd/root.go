@@ -58,8 +58,8 @@ type AppConfig struct {
 }
 
 // objects that define a path. later used for utils.ExpandUser to get applied on all paths
-var path_objects = []string{
-	"fifo", "certfile", "keyfile", "statefile", "custom-css",
+var filename_fields = []string{
+	"fifo", "certfile", "keyfile", "statefile", "custom-css", "exec-start", "exec-end", "exec-pause",
 }
 
 var ctx context.Context
