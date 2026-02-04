@@ -7,8 +7,8 @@ import (
 )
 
 type MediaPlayer2 struct {
-	*Instance;
-	webguiAddress string;
+	*Instance
+	webguiAddress string
 }
 
 func (m *MediaPlayer2) properties() map[string]*prop.Prop {
@@ -29,12 +29,11 @@ func (m *MediaPlayer2) properties() map[string]*prop.Prop {
 	}
 }
 
-
 // Raise brings the media player's user interface to the front using any appropriate mechanism available.
 // For goje this can mean opening goje's url
 
 // https://specifications.freedesktop.org/mpris-spec/latest/Media_Player.html#Method:Raise
-func (m *MediaPlayer2) Raise() *dbus.Error { 
+func (m *MediaPlayer2) Raise() *dbus.Error {
 	if m.webguiAddress != "" {
 		utils.OpenURL(utils.FixHttpAddress(m.webguiAddress))
 	}

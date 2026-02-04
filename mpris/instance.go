@@ -31,8 +31,8 @@ type Instance struct {
 type MetadataMap map[string]any
 
 type InstanceOpts struct {
-	NoInstance bool;
-	WebguiAddress string;
+	NoInstance    bool
+	WebguiAddress string
 }
 
 func NewInstance(pt *timer.PomodoroTimer, opts *InstanceOpts) (ins *Instance, err error) {

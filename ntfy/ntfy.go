@@ -74,7 +74,7 @@ func ntfyRequest(address, auth, content, tags string) (*http.Request, error) {
 		return nil, err
 	}
 	if auth != "" {
-		req.Header.Set("Authorization", "Basic " + base64.StdEncoding.EncodeToString([]byte(auth)))
+		req.Header.Set("Authorization", "Basic "+base64.StdEncoding.EncodeToString([]byte(auth)))
 	}
 	req.Header.Set("Tags", tags)
 	return req, nil

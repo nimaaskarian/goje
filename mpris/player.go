@@ -31,7 +31,6 @@ func (p *Player) OnVolume(c *prop.Change) *dbus.Error {
 	return nil
 }
 
-
 func (p *Player) setProp(iface, name string, value dbus.Variant) {
 	if err := p.Instance.props.Set(iface, name, value); err != nil {
 		slog.Error("setting prop failed", "interface", iface, "name", name, "err", err)

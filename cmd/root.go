@@ -360,7 +360,7 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 		go config.httpDaemon.Run(config.HttpAddress, config.Certfile, config.Keyfile, ctx)
 	}
 	if config.Mpris {
-		instance, err := mpris.NewInstance(t, &mpris.InstanceOpts {NoInstance: config.MprisNoInstance, WebguiAddress: config.webguiAddress})
+		instance, err := mpris.NewInstance(t, &mpris.InstanceOpts{NoInstance: config.MprisNoInstance, WebguiAddress: config.webguiAddress})
 		if err != nil {
 			return err
 		}
