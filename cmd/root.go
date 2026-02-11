@@ -294,7 +294,7 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 		config.Timer.OnModeStart.Append(writeToFifo)
 	}
 	if config.NtfyAddress != "" {
-		ntfy.Setup(config.NtfyAddress, config.NtfyAuth, config.Timer)
+		ntfy.Setup(config.NtfyAddress, config.NtfyAuth, &config.Timer)
 	}
 	if config.Statefile != "" {
 		slog.Debug("appending statefile")

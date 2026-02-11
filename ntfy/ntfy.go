@@ -10,7 +10,8 @@ import (
 	"github.com/nimaaskarian/goje/utils"
 )
 
-func Setup(ntfyAddress string, ntfyAuth string, timerConfig timer.TimerConfig) {
+func Setup(ntfyAddress string, ntfyAuth string, timerConfig* timer.TimerConfig) {
+	slog.Info("setting up ntfy", "address", ntfyAddress)
 	ntfyAddress = utils.FixHttpAddress(ntfyAddress)
 	timerConfig.OnInit.Append((func(pt *timer.PomodoroTimer) {
 		if req, err := ntfyRequest(ntfyAddress, ntfyAuth, "Timer init!", "tomato,arrow_forward"); err == nil {
