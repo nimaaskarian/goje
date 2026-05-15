@@ -1,29 +1,70 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<meta name="color-scheme" content="light dark" />
-    <link rel="stylesheet" href="/custom.css">
-    <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="icon" type="image/png" sizes="16x16" href="/assets/goje-16x16.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/goje-32x32.png">
-    <link rel="icon" type="image/png" sizes="192x192" href="/assets/goje-192x192.png">
-    <link rel="icon" type="image/png" sizes="512x512" href="/assets/goje-512x512.png">
-		<title>Goje</title>
-	</head>
-	<body class="h-full">
-		<div id="app" class="h-full">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="stylesheet" href="/custom.css" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="16x16"
+      href="/assets/goje-16x16.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="/assets/goje-32x32.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="/assets/goje-192x192.png"
+    />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="512x512"
+      href="/assets/goje-512x512.png"
+    />
+    <link
+      rel="preload"
+      as="image"
+      type="image/png"
+      href="/assets/goje-sad-32x32.png"
+    />
+    <title>Goje</title>
+  </head>
+  <body class="h-full">
+    <div id="app" class="h-full">
       <noscript>
         <div class="p-4">
-          <h1 class="text-2xl bold block mb-2">Hello there nerd. yes i know who you are.</h1>
-          Seems like you don't have JS enabled. goje's webgui depends on JS, its written in <a href="https://preactjs.com/" class="text-blue-500">Preact</a>.
-          Either use the tcp server (the default address is <code>localhost:7800</code>), or the json api (<code>/api/timer</code>).
-          If you wanna know about more nerdy setups, checkout the goje github's <a href="https://github.com/nimaaskarian/goje/wiki" class="text-blue-500">wiki page</a>;
-          Or contribute by making a pure html+css webgui. PRs are welcome at <a href="https://github.com/nimaaskarian/goje/pulls" class="text-blue-500">github</a>.
+          <h1 class="text-2xl bold block mb-2">
+            Hello there nerd. yes i know who you are.
+          </h1>
+          Seems like you don't have JS enabled. goje's webgui depends on JS, its
+          written in
+          <a href="https://preactjs.com/" class="text-blue-500">Preact</a>.
+          Either use the tcp server (the default address is
+          <code>localhost:7800</code>), or the json api
+          (<code>/api/timer</code>). If you wanna know about more nerdy setups,
+          checkout the goje github's
+          <a
+            href="https://github.com/nimaaskarian/goje/wiki"
+            class="text-blue-500"
+            >wiki page</a
+          >; Or contribute by making a pure html+css webgui. PRs are welcome at
+          <a
+            href="https://github.com/nimaaskarian/goje/pulls"
+            class="text-blue-500"
+            >github</a
+          >.
         </div>
       </noscript>
     </div>
-		<script type="module" src="/src/index.jsx"></script>
-	</body>
+    <script type="module" src="/src/index.jsx"></script>
+  </body>
 </html>

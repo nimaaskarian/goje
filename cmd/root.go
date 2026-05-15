@@ -16,7 +16,6 @@ import (
 	"github.com/nimaaskarian/goje/activitywatch"
 	"github.com/nimaaskarian/goje/httpd"
 	"github.com/nimaaskarian/goje/mpris"
-	"github.com/nimaaskarian/goje/ntfy"
 	"github.com/nimaaskarian/goje/tcpd"
 	"github.com/nimaaskarian/goje/timer"
 	"github.com/nimaaskarian/goje/utils"
@@ -39,6 +38,8 @@ type AppConfig struct {
 	ExecStart            string        `mapstructure:"exec-start,omitempty"`
 	ExecEnd              string        `mapstructure:"exec-end,omitempty"`
 	ExecPause            string        `mapstructure:"exec-pause,omitempty"`
+	ExecQuit             string        `mapstructure:"exec-quit,omitempty"`
+	SyncExec             bool          `mapstructure:"sync-exec,omitempty"`
 	HttpAddress          string        `mapstructure:"http-address,omitempty"`
 	TcpAddress           string        `mapstructure:"tcp-address,omitempty"`
 	Fifo                 string        `mapstructure:"fifo,omitempty"`
@@ -47,6 +48,7 @@ type AppConfig struct {
 	Keyfile              string        `mapstructure:"keyfile,omitempty"`
 	Statefile            string        `mapstructure:"statefile,omitempty"`
 	NtfyAddress          string        `mapstructure:"ntfy-address,omitempty"`
+	NtfyClickUrl         string        `mapstructure:"ntfy-click-url,omitempty"`
 	NtfyAuth             string        `mapstructure:"ntfy-auth,omitempty"`
 	StatefileKeepUpdated bool          `mapstructure:"statefile-keep-updated,omitempty"`
 	Version              bool          `mapstructure:"version,omitempty"`
@@ -59,7 +61,7 @@ type AppConfig struct {
 
 // objects that define a path. later used for utils.ExpandUser to get applied on all paths
 var filename_fields = []string{
-	"fifo", "certfile", "keyfile", "statefile", "custom-css", "exec-start", "exec-end", "exec-pause",
+	"fifo", "certfile", "keyfile", "statefile", "custom-css", "exec-start", "exec-end", "exec-pause", "exec-quit",
 }
 
 var ctx context.Context
@@ -79,16 +81,19 @@ func rootFlags() *pflag.FlagSet {
 	flagset.String("exec-start", "", "command to run when any timer mode starts (run's the script with json of timer as the first arguemnt)")
 	flagset.String("exec-end", "", "command to run when any timer mode ends (run's the script with json of timer as the first arguemnt)")
 	flagset.String("exec-pause", "", "command to run when timer (un)pauses")
+	flagset.String("exec-quit", "", "command to run when timer quit")
+	flagset.Bool("sync-exec", false, "run exec-* hooks synchronously, pausing the timer instead of asynchronously (default)")
 	flagset.StringP("tcp-address", "a", "localhost:7800", "address:[port] for tcp pomodoro daemon (doesn't run when empty)")
 	flagset.StringP("http-address", "A", "localhost:7900", "address:[port] for http pomodoro api (doesn't run when empty)")
 	flagset.Bool("no-webgui", false, "don't run webgui. webgui can't be run without the json server")
 	flagset.Bool("no-open-browser", false, "don't open the browser when running webgui")
-	flagset.BoolP("activitywatch", "", false, "daemon send's pomodoro data to activitywatch if is present")
+	flagset.Bool("activitywatch", false, "daemon send's pomodoro data to activitywatch if is present")
 	flagset.StringP("fifo", "f", "", "write timer events in a fifo at given path")
 	flagset.String("certfile", "", "path to ssl certificate's cert file")
 	flagset.String("keyfile", "", "path to ssl certificate's key file")
 	flagset.String("statefile", "", "path a file that goje writes its state on when quitting, and recovering it on startup")
 	flagset.String("ntfy-address", "", "address to ntfy topic")
+	flagset.String("ntfy-click-url", "", "address to open on notification click of subscribers")
 	flagset.String("ntfy-auth", "", "username:password to access ntfy topic")
 	flagset.Bool("mpris", false, "run a MPRIS interface for goje")
 	flagset.Bool("mpris-no-instance", false, "don't append instance to MPRIS's name")
@@ -263,6 +268,35 @@ func readConfig(cmd *cobra.Command) error {
 
 func setupDaemons(t *timer.PomodoroTimer) error {
 	slog.Info("setting up daemons...")
+
+	t.Config = &config.Timer
+
+	for _, script := range []struct {
+		command string
+		event   *timer.TimerConfigEvent
+	}{
+		{config.ExecStart, &config.Timer.OnModeStart},
+		{config.ExecEnd, &config.Timer.OnModeEnd},
+		{config.ExecPause, &config.Timer.OnPause},
+		{config.ExecQuit, &config.Timer.OnQuit},
+	} {
+		if script.command != "" {
+			script.event.Append(func(pt *timer.PomodoroTimer) {
+				var temp bool
+				if config.SyncExec {
+					pt.State.Mu.Lock()
+					temp = pt.State.Paused
+					pt.State.Paused = true
+				}
+				runSystemCommand(pt, script.command)
+				if config.SyncExec {
+					pt.State.Paused = temp
+					pt.State.Mu.Unlock()
+				}
+			})
+		}
+	}
+
 	if config.Fifo != "" {
 		slog.Info("using fifo", "path", config.Fifo)
 		utils.Mkfifo(config.Fifo)
@@ -294,7 +328,7 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 		config.Timer.OnModeStart.Append(writeToFifo)
 	}
 	if config.NtfyAddress != "" {
-		ntfy.Setup(config.NtfyAddress, config.NtfyAuth, &config.Timer)
+		ntfySetup(&config)
 	}
 	if config.Statefile != "" {
 		slog.Debug("appending statefile")
@@ -319,23 +353,6 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 		aw.AddEventWatchers(&config.Timer)
 	}
 
-	t.Config = &config.Timer
-
-	if config.ExecStart != "" {
-		config.Timer.OnModeStart.Append(func(t *timer.PomodoroTimer) {
-			runSystemCommand(t, config.ExecStart)
-		})
-	}
-	if config.ExecEnd != "" {
-		config.Timer.OnModeEnd.Append(func(t *timer.PomodoroTimer) {
-			runSystemCommand(t, config.ExecEnd)
-		})
-	}
-	if config.ExecPause != "" {
-		config.Timer.OnPause.Append(func(t *timer.PomodoroTimer) {
-			runSystemCommand(t, config.ExecPause)
-		})
-	}
 	if config.TcpAddress != "" {
 		tcp_daemon := tcpd.Daemon{
 			Timer: t,
@@ -360,7 +377,7 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 		go config.httpDaemon.Run(config.HttpAddress, config.Certfile, config.Keyfile, ctx)
 	}
 	if config.Mpris {
-		instance, err := mpris.NewInstance(t, &mpris.InstanceOpts {NoInstance: config.MprisNoInstance, WebguiAddress: config.webguiAddress})
+		instance, err := mpris.NewInstance(t, &mpris.InstanceOpts{NoInstance: config.MprisNoInstance, WebguiAddress: config.webguiAddress})
 		if err != nil {
 			return err
 		}
@@ -384,11 +401,11 @@ func runWebgui(address string) {
 
 func runSystemCommand(t *timer.PomodoroTimer, cmd string) {
 	content, _ := json.Marshal(t)
-	go func() {
-		if err := exec.Command(cmd, string(content)).Run(); err != nil {
-			slog.Error("running system command failed", "cmd", cmd, "err", err, "content", content)
-		}
-	}()
+	slog.Info("starting command", "cmd", cmd)
+	if err := exec.Command(cmd, string(content)).Run(); err != nil {
+		slog.Error("running system command failed", "cmd", cmd, "err", err, "content", content)
+	}
+	slog.Info("finished command", "cmd", cmd)
 }
 
 func Execute() {

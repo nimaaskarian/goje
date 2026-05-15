@@ -38,12 +38,7 @@ type TimerConfigEvent struct {
 }
 
 func (e *TimerConfigEvent) Append(handler func(*PomodoroTimer)) {
-	e.OnEvent = append(e.OnEvent, handler)
-}
-
-// append function to be run only on the next event
-func (e *TimerConfigEvent) AppendOnce(handler func(*PomodoroTimer)) {
-	e.OnEventOnce = append(e.OnEventOnce, handler)
+	e.OnEvent = append(e.OnEvent, func(pt *PomodoroTimer) { go handler(pt) })
 }
 
 // this is non-blocking (goroutine). it iterates through all the events and goroutines them.

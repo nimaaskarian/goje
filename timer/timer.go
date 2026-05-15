@@ -5,6 +5,7 @@ import (
 	"log"
 	"log/slog"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -24,6 +25,7 @@ type PomodoroTimerState struct {
 	Mode             PomodoroTimerMode
 	FinishedSessions uint
 	Paused           bool
+	Mu               sync.Mutex `json:"-"`
 }
 
 func (state *PomodoroTimerState) IsZero() bool {
