@@ -68,6 +68,7 @@ var ctx context.Context
 var cancel context.CancelFunc
 
 var config = AppConfig{Timer: timer.DefaultConfig}
+var old_config = AppConfig{}
 
 // flags that are shared between client and root
 func rootFlags() *pflag.FlagSet {
@@ -128,7 +129,7 @@ var rootCmd = &cobra.Command{
 }
 
 func setupServerAndSignalWatcher(t *timer.PomodoroTimer) error {
-	if config.Statefile != "" {
+	if config.Statefile != old_config.Statefile {
 		content, err := os.ReadFile(config.Statefile)
 		if err == nil {
 			if err := json.Unmarshal(content, &t.State); err != nil {
@@ -146,14 +147,14 @@ func setupServerAndSignalWatcher(t *timer.PomodoroTimer) error {
 			syscall.SIGQUIT,
 			syscall.SIGABRT,
 		)
+		if err := setupDaemons(t); err != nil {
+			return err
+		}
 		if t.State.IsZero() {
 			slog.Debug("state is zero.")
 			t.Init()
 		} else {
 			slog.Debug("state is NOT zero.")
-		}
-		if err := setupDaemons(t); err != nil {
-			return err
 		}
 		go t.Loop(ctx)
 		go func() {
@@ -174,6 +175,7 @@ func setupServerAndSignalWatcher(t *timer.PomodoroTimer) error {
 		signal.Notify(restartSig, syscall.SIGHUP)
 		select {
 		case <-restartSig:
+			old_config = config
 			slog.Info("restart signal (SIGHUP) caught. restarting...")
 		case <-ctx.Done():
 		}
@@ -272,13 +274,14 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 	t.Config = &config.Timer
 
 	for _, script := range []struct {
-		command string
-		event   *timer.TimerConfigEvent
+		command     string
+		event       *timer.TimerConfigEvent
+		old_command string
 	}{
-		{config.ExecStart, &config.Timer.OnModeStart},
-		{config.ExecEnd, &config.Timer.OnModeEnd},
-		{config.ExecPause, &config.Timer.OnPause},
-		{config.ExecQuit, &config.Timer.OnQuit},
+		{config.ExecStart, &config.Timer.OnModeStart, old_config.ExecStart},
+		{config.ExecEnd, &config.Timer.OnModeEnd, old_config.ExecEnd},
+		{config.ExecPause, &config.Timer.OnPause, old_config.ExecPause},
+		{config.ExecQuit, &config.Timer.OnQuit, old_config.ExecQuit},
 	} {
 		if script.command != "" {
 			script.event.Append(func(pt *timer.PomodoroTimer) {
@@ -297,7 +300,7 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 		}
 	}
 
-	if config.Fifo != "" {
+	if config.Fifo != old_config.Fifo {
 		slog.Info("using fifo", "path", config.Fifo)
 		utils.Mkfifo(config.Fifo)
 		writeToFifo := func(t *timer.PomodoroTimer) {
@@ -327,10 +330,10 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 		config.Timer.OnModeEnd.Append(writeToFifo)
 		config.Timer.OnModeStart.Append(writeToFifo)
 	}
-	if config.NtfyAddress != "" {
+	if config.NtfyAddress != old_config.NtfyAddress {
 		ntfySetup(&config)
 	}
-	if config.Statefile != "" {
+	if config.Statefile != old_config.Statefile {
 		slog.Debug("appending statefile")
 		write_to_state_file := func(pt *timer.PomodoroTimer) {
 			slog.Debug("writing in state file", "statefile", config.Statefile)
@@ -353,7 +356,7 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 		aw.AddEventWatchers(&config.Timer)
 	}
 
-	if config.TcpAddress != "" {
+	if config.TcpAddress != old_config.TcpAddress {
 		tcp_daemon := tcpd.Daemon{
 			Timer: t,
 		}
@@ -363,7 +366,7 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 		slog.Info("running tcp daemon", "address", config.TcpAddress)
 		go tcp_daemon.Run(ctx)
 	}
-	if config.HttpAddress != "" {
+	if config.HttpAddress != old_config.HttpAddress {
 		config.httpDaemon = &httpd.Daemon{
 			Timer:   t,
 			Clients: &sync.Map{},
