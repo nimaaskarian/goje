@@ -49,12 +49,12 @@ func (d *Watcher) pushCurrentMode(t *timer.PomodoroTimer, now time.Time) {
 }
 
 func (d *Watcher) AddEventWatchers(config *timer.TimerConfig) {
-	config.OnModeStart.Append(func(t *timer.PomodoroTimer) {
+	config.Hooks.OnModeStart.Append(func(t *timer.PomodoroTimer) {
 		d.started = time.Now().UTC()
 	})
-	config.OnModeEnd.Append(d.pushCurrentModeNow)
-	config.OnQuit.Append(d.pushCurrentModeNow)
-	config.OnPause.Append(func(t *timer.PomodoroTimer) {
+	config.Hooks.OnModeEnd.Append(d.pushCurrentModeNow)
+	config.Hooks.OnQuit.Append(d.pushCurrentModeNow)
+	config.Hooks.OnPause.Append(func(t *timer.PomodoroTimer) {
 		if t.State.Paused {
 			now := time.Now().UTC()
 			d.paused_start = now

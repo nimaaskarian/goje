@@ -43,17 +43,17 @@ type PomodoroTimer struct {
 func (pt *PomodoroTimer) Reset() {
 	slog.Info("timer reseted.", "new time", pt.Config.Duration[pt.State.Mode].String())
 	pt.SeekTo(pt.Config.Duration[pt.State.Mode])
-	if !pt.Config.OnSet.Run(pt) {
-		pt.Config.OnChange.RunSync(pt)
+	if !pt.Config.Hooks.OnSet.Run(pt) {
+		pt.Config.Hooks.OnChange.RunSync(pt)
 	}
 	if pt.State.Paused {
-		pt.Config.OnPause.OnEventOnce = []func(*PomodoroTimer){func(pt *PomodoroTimer) {
-			if !pt.State.Paused && !pt.Config.OnSet.Run(pt) {
-				pt.Config.OnModeStart.Run(pt)
+		pt.Config.Hooks.OnPause.OnEventOnce = []func(*PomodoroTimer){func(pt *PomodoroTimer) {
+			if !pt.State.Paused && !pt.Config.Hooks.OnSet.Run(pt) {
+				pt.Config.Hooks.OnModeStart.Run(pt)
 			}
 		}}
-	} else if !pt.Config.OnSet.Run(pt) {
-		pt.Config.OnModeStart.Run(pt)
+	} else if !pt.Config.Hooks.OnSet.Run(pt) {
+		pt.Config.Hooks.OnModeStart.Run(pt)
 	}
 }
 
@@ -62,13 +62,13 @@ func (pt *PomodoroTimer) Init() {
 	pt.State.FinishedSessions = 0
 	pt.State.Paused = pt.Config.Paused
 	pt.Reset()
-	pt.Config.OnInit.Run(pt)
+	pt.Config.Hooks.OnInit.Run(pt)
 }
 
 func (pt *PomodoroTimer) Pause(pauseValue bool) {
 	pt.State.Paused = pauseValue
-	if !pt.Config.OnSet.Run(pt) {
-		pt.Config.OnPause.Run(pt)
+	if !pt.Config.Hooks.OnSet.Run(pt) {
+		pt.Config.Hooks.OnPause.Run(pt)
 	}
 }
 
@@ -78,8 +78,8 @@ func (pt *PomodoroTimer) TogglePause() {
 
 func (pt *PomodoroTimer) SeekTo(duration time.Duration) {
 	pt.State.Duration = duration
-	if !pt.Config.OnSet.Run(pt) {
-		pt.Config.OnChange.Run(pt)
+	if !pt.Config.Hooks.OnSet.Run(pt) {
+		pt.Config.Hooks.OnChange.Run(pt)
 	}
 }
 
@@ -97,7 +97,7 @@ func (pt *PomodoroTimer) beforeTick() {
 		// timer before executing OnModeRun, so SwitchNextMode wouldn'pt
 		// change the timer reference during the call.
 		t_copy := *pt
-		pt.Config.OnModeEnd.Run(&t_copy)
+		pt.Config.Hooks.OnModeEnd.Run(&t_copy)
 		pt.SwitchNextMode()
 	}
 }
@@ -107,7 +107,7 @@ func (pt *PomodoroTimer) tick() {
 		return
 	}
 	pt.State.Duration -= pt.Config.DurationPerTick
-	pt.Config.OnChange.Run(pt)
+	pt.Config.Hooks.OnChange.Run(pt)
 }
 
 // Halts the current thread until ctx is Done. Use in a goroutine.

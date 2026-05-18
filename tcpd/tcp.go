@@ -113,8 +113,8 @@ func sessionsCmd(timer *timer.PomodoroTimer, args []string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		if !timer.Config.OnSet.Run(timer) {
-			timer.Config.OnChange.Run(timer)
+		if !timer.Config.Hooks.OnSet.Run(timer) {
+			timer.Config.Hooks.OnChange.Run(timer)
 		}
 	default:
 		return "", WrongNumberOfArgsError{args[0]}
@@ -129,8 +129,8 @@ func configSessionsCmd(timer *timer.PomodoroTimer, args []string) (string, error
 		if err != nil {
 			return "", err
 		}
-		if !timer.Config.OnSet.Run(timer) {
-			timer.Config.OnChange.Run(timer)
+		if !timer.Config.Hooks.OnSet.Run(timer) {
+			timer.Config.Hooks.OnChange.Run(timer)
 		}
 	default:
 		return "", WrongNumberOfArgsError{args[0]}
@@ -261,6 +261,7 @@ func parseBool(input string) (bool, error) {
 type Daemon struct {
 	Timer    *timer.PomodoroTimer
 	Listener net.Listener
+	ctx      context.Context
 }
 
 func (d *Daemon) InitializeListener(address string) error {
@@ -293,25 +294,42 @@ func (d *Daemon) handleConnection(conn net.Conn) {
 		} else {
 			break
 		}
+		select {
+		case <-d.ctx.Done():
+			return
+		default:
+		}
 	}
 }
 
 func (d *Daemon) Run(ctx context.Context) {
+	d.ctx = ctx
 	for {
 		select {
 		case <-ctx.Done():
-			slog.Info("closing tcpd connection")
-			d.Listener.Close()
+			slog.Info("closing tcpd listener", "address", d.Listener.Addr())
+			if d.Listener != nil {
+				d.Listener.Close()
+			}
 			return
 		default:
-			slog.Info("accepting connection...")
-			conn, err := d.Listener.Accept()
-			if err != nil {
-				slog.Warn("connection throw error", "err", err)
-				return
+		}
+		if listener, ok := d.Listener.(*net.TCPListener); ok {
+			listener.SetDeadline(time.Now().Add(100 * time.Millisecond))
+		}
+
+		conn, err := d.Listener.Accept()
+		if err != nil {
+			if neterr, ok := err.(net.Error); ok && neterr.Timeout() {
+				continue
 			}
-			slog.Info("connection added!")
-			go d.handleConnection(conn)
+			slog.Warn("connection throw error", "err", err)
+			return
+		}
+		slog.Info("connection added!", "address", conn.RemoteAddr())
+		go d.handleConnection(conn)
+		if listener, ok := d.Listener.(*net.TCPListener); ok {
+			listener.SetDeadline(time.Time{})
 		}
 	}
 }

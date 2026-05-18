@@ -76,7 +76,7 @@ var clientCmd = &cobra.Command{
 		}
 		client := sse.NewClient(outbound_address + "/api/timer/stream")
 		client.Connection = httpClient
-		config.Timer.OnSet.Append(func(t *timer.PomodoroTimer) {
+		config.Timer.Hooks.OnSet.Append(func(t *timer.PomodoroTimer) {
 			content, _ := json.Marshal(t)
 			req, err := http.NewRequest("POST", outbound_address+"/api/timer", bytes.NewBuffer(content))
 			if err != nil {
@@ -95,13 +95,13 @@ var clientCmd = &cobra.Command{
 				fmt.Println(string(msg.Data))
 				switch string(msg.Event) {
 				case "change":
-					config.Timer.OnChange.Run(&t)
+					config.Timer.Hooks.OnChange.Run(&t)
 				case "end":
-					config.Timer.OnModeEnd.Run(&t)
+					config.Timer.Hooks.OnModeEnd.Run(&t)
 				case "start":
-					config.Timer.OnModeStart.Run(&t)
+					config.Timer.Hooks.OnModeStart.Run(&t)
 				case "pause":
-					config.Timer.OnPause.Run(&t)
+					config.Timer.Hooks.OnPause.Run(&t)
 				}
 			})
 			if err != nil {

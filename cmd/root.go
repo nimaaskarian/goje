@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"reflect"
 	"strings"
 	"sync"
 	"syscall"
@@ -31,33 +32,36 @@ var quitting = false
 
 type AppConfig struct {
 	Timer                timer.TimerConfig
-	CustomCss            string        `mapstructure:"custom-css,omitempty"`
-	Activitywatch        bool          `mapstructure:"activitywatch,omitempty"`
-	NoWebgui             bool          `mapstructure:"no-webgui,omitempty"`
-	NoOpenBrowser        bool          `mapstructure:"no-open-browser,omitempty"`
-	ExecStart            string        `mapstructure:"exec-start,omitempty"`
-	ExecEnd              string        `mapstructure:"exec-end,omitempty"`
-	ExecPause            string        `mapstructure:"exec-pause,omitempty"`
-	ExecQuit             string        `mapstructure:"exec-quit,omitempty"`
-	SyncExec             bool          `mapstructure:"sync-exec,omitempty"`
-	HttpAddress          string        `mapstructure:"http-address,omitempty"`
-	TcpAddress           string        `mapstructure:"tcp-address,omitempty"`
-	Fifo                 string        `mapstructure:"fifo,omitempty"`
-	Loglevel             string        `mapstructure:"loglevel,omitempty"`
-	Certfile             string        `mapstructure:"certfile,omitempty"`
-	Keyfile              string        `mapstructure:"keyfile,omitempty"`
-	Statefile            string        `mapstructure:"statefile,omitempty"`
-	NtfyAddress          string        `mapstructure:"ntfy-address,omitempty"`
-	NtfyClickUrl         string        `mapstructure:"ntfy-click-url,omitempty"`
-	NtfyAuth             string        `mapstructure:"ntfy-auth,omitempty"`
-	StatefileKeepUpdated bool          `mapstructure:"statefile-keep-updated,omitempty"`
-	Version              bool          `mapstructure:"version,omitempty"`
-	Help                 bool          `mapstructure:"help,omitempty"`
-	Mpris                bool          `mapstructure:"mpris,omitempty"`
-	MprisNoInstance      bool          `mapstructure:"mpris-no-instance,omitempty"`
-	httpDaemon           *httpd.Daemon `mapstructure:"-"`
-	webguiAddress        string        `mapstructure:"-"`
+	CustomCss            string `mapstructure:"custom-css,omitempty"`
+	Activitywatch        bool   `mapstructure:"activitywatch,omitempty"`
+	NoWebgui             bool   `mapstructure:"no-webgui,omitempty"`
+	NoOpenBrowser        bool   `mapstructure:"no-open-browser,omitempty"`
+	ExecStart            string `mapstructure:"exec-start,omitempty"`
+	ExecEnd              string `mapstructure:"exec-end,omitempty"`
+	ExecPause            string `mapstructure:"exec-pause,omitempty"`
+	ExecQuit             string `mapstructure:"exec-quit,omitempty"`
+	SyncExec             bool   `mapstructure:"sync-exec,omitempty"`
+	HttpAddress          string `mapstructure:"http-address,omitempty"`
+	TcpAddress           string `mapstructure:"tcp-address,omitempty"`
+	Fifo                 string `mapstructure:"fifo,omitempty"`
+	Loglevel             string `mapstructure:"loglevel,omitempty"`
+	Certfile             string `mapstructure:"certfile,omitempty"`
+	Keyfile              string `mapstructure:"keyfile,omitempty"`
+	Statefile            string `mapstructure:"statefile,omitempty"`
+	NtfyAddress          string `mapstructure:"ntfy-address,omitempty"`
+	NtfyClickUrl         string `mapstructure:"ntfy-click-url,omitempty"`
+	NtfyAuth             string `mapstructure:"ntfy-auth,omitempty"`
+	StatefileKeepUpdated bool   `mapstructure:"statefile-keep-updated,omitempty"`
+	Version              bool   `mapstructure:"version,omitempty"`
+	Help                 bool   `mapstructure:"help,omitempty"`
+	Mpris                bool   `mapstructure:"mpris,omitempty"`
+	MprisNoInstance      bool   `mapstructure:"mpris-no-instance,omitempty"`
 }
+
+var (
+	httpDaemon    *httpd.Daemon
+	webguiAddress string
+)
 
 // objects that define a path. later used for utils.ExpandUser to get applied on all paths
 var filename_fields = []string{
@@ -65,6 +69,10 @@ var filename_fields = []string{
 }
 
 var ctx context.Context
+var tcp_ctx context.Context
+var http_ctx context.Context
+var tcp_cancel context.CancelFunc
+var http_cancel context.CancelFunc
 var cancel context.CancelFunc
 
 var config = AppConfig{Timer: timer.DefaultConfig}
@@ -167,7 +175,7 @@ func setupServerAndSignalWatcher(t *timer.PomodoroTimer) error {
 			}
 			quitting = true
 			slog.Info("caught deadly signal")
-			t.Config.OnQuit.RunSync(t)
+			t.Config.Hooks.OnQuit.RunSync(t)
 			slog.Info("clean up finished. quitting")
 			os.Exit(0)
 		}()
@@ -192,11 +200,19 @@ func setupConfigForCmd(cmd *cobra.Command) error {
 	viper.OnConfigChange(func(e fsnotify.Event) {
 		if e.Has(fsnotify.Write) {
 			slog.Info("config changed", "path", e.Name, "event", e)
+			old_config = config
 			if err := readConfig(cmd); err != nil {
-				slog.Error("invalid config", "err", err)
-				os.Exit(1)
+				slog.Error("invalid config. using the old config.", "err", err)
+				config = old_config
+				return
 			}
-			cancel()
+			temp := old_config.Timer.Hooks
+			old_config.Timer.Hooks = timer.TimerConfigHooks{}
+			if !reflect.DeepEqual(config, old_config) {
+				slog.Info("configs aren't equal. canceling the timer", "old", old_config, "new", config)
+				cancel()
+			}
+			old_config.Timer.Hooks = temp
 		}
 	})
 	viper.WatchConfig()
@@ -275,13 +291,13 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 
 	for _, script := range []struct {
 		command     string
-		event       *timer.TimerConfigEvent
+		event       *timer.TimerConfigHook
 		old_command string
 	}{
-		{config.ExecStart, &config.Timer.OnModeStart, old_config.ExecStart},
-		{config.ExecEnd, &config.Timer.OnModeEnd, old_config.ExecEnd},
-		{config.ExecPause, &config.Timer.OnPause, old_config.ExecPause},
-		{config.ExecQuit, &config.Timer.OnQuit, old_config.ExecQuit},
+		{config.ExecStart, &config.Timer.Hooks.OnModeStart, old_config.ExecStart},
+		{config.ExecEnd, &config.Timer.Hooks.OnModeEnd, old_config.ExecEnd},
+		{config.ExecPause, &config.Timer.Hooks.OnPause, old_config.ExecPause},
+		{config.ExecQuit, &config.Timer.Hooks.OnQuit, old_config.ExecQuit},
 	} {
 		if script.command != "" {
 			script.event.Append(func(pt *timer.PomodoroTimer) {
@@ -316,19 +332,19 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 			slog.Debug("writing to fifo finished")
 		}
 		slog.Debug("setting up fifo events")
-		config.Timer.OnQuit.Append(func(*timer.PomodoroTimer) {
+		config.Timer.Hooks.OnQuit.Append(func(*timer.PomodoroTimer) {
 			slog.Debug("removing fifo", "path", config.Fifo)
 			if err := os.Remove(config.Fifo); err != nil {
 				slog.Error("remove fifo failed", "err", err)
 			}
 		})
 		// initially write to fifo. for times that timer is loaded from a state and
-		// OnInit wouldn't fire
+		// Hooks.OnInit wouldn't fire
 		writeToFifo(t)
-		config.Timer.OnInit.Append(writeToFifo)
-		config.Timer.OnChange.Append(writeToFifo)
-		config.Timer.OnModeEnd.Append(writeToFifo)
-		config.Timer.OnModeStart.Append(writeToFifo)
+		config.Timer.Hooks.OnInit.Append(writeToFifo)
+		config.Timer.Hooks.OnChange.Append(writeToFifo)
+		config.Timer.Hooks.OnModeEnd.Append(writeToFifo)
+		config.Timer.Hooks.OnModeStart.Append(writeToFifo)
 	}
 	if config.NtfyAddress != old_config.NtfyAddress {
 		ntfySetup(&config)
@@ -342,12 +358,12 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 				slog.Error("write state file failed", "err", err)
 			}
 		}
-		config.Timer.OnQuit.Append(write_to_state_file)
+		config.Timer.Hooks.OnQuit.Append(write_to_state_file)
 		if config.StatefileKeepUpdated {
-			config.Timer.OnInit.Append(write_to_state_file)
-			config.Timer.OnChange.Append(write_to_state_file)
-			config.Timer.OnModeEnd.Append(write_to_state_file)
-			config.Timer.OnModeStart.Append(write_to_state_file)
+			config.Timer.Hooks.OnInit.Append(write_to_state_file)
+			config.Timer.Hooks.OnChange.Append(write_to_state_file)
+			config.Timer.Hooks.OnModeEnd.Append(write_to_state_file)
+			config.Timer.Hooks.OnModeStart.Append(write_to_state_file)
 		}
 	}
 	if config.Activitywatch {
@@ -356,7 +372,14 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 		aw.AddEventWatchers(&config.Timer)
 	}
 
+	slog.Info("checking tcp", "old", old_config.TcpAddress, "new", config.TcpAddress)
 	if config.TcpAddress != old_config.TcpAddress {
+		slog.Info("restarting tcp", "old", old_config.TcpAddress, "new", config.TcpAddress)
+		if tcp_cancel != nil {
+			slog.Info("calling tcp cancel")
+			tcp_cancel()
+		}
+		tcp_ctx, tcp_cancel = context.WithCancel(context.Background())
 		tcp_daemon := tcpd.Daemon{
 			Timer: t,
 		}
@@ -364,28 +387,32 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 			return err
 		}
 		slog.Info("running tcp daemon", "address", config.TcpAddress)
-		go tcp_daemon.Run(ctx)
+		go tcp_daemon.Run(tcp_ctx)
 	}
 	if config.HttpAddress != old_config.HttpAddress {
-		config.httpDaemon = &httpd.Daemon{
+		if http_cancel != nil {
+			http_cancel()
+		}
+		http_ctx, http_cancel = context.WithCancel(context.Background())
+		httpDaemon = &httpd.Daemon{
 			Timer:   t,
 			Clients: &sync.Map{},
 		}
-		config.httpDaemon.Init()
-		config.httpDaemon.SetupEvents()
-		config.httpDaemon.JsonRoutes()
+		httpDaemon.Init()
+		httpDaemon.SetupEvents()
+		httpDaemon.JsonRoutes()
 		if !config.NoWebgui {
 			runWebgui(config.HttpAddress)
 		}
-		go config.httpDaemon.Run(config.HttpAddress, config.Certfile, config.Keyfile, ctx)
+		go httpDaemon.Run(config.HttpAddress, config.Certfile, config.Keyfile, http_ctx)
 	}
 	if config.Mpris {
-		instance, err := mpris.NewInstance(t, &mpris.InstanceOpts{NoInstance: config.MprisNoInstance, WebguiAddress: config.webguiAddress})
+		instance, err := mpris.NewInstance(t, &mpris.InstanceOpts{NoInstance: config.MprisNoInstance, WebguiAddress: webguiAddress})
 		if err != nil {
 			return err
 		}
 		instance.Start(ctx)
-		config.Timer.OnQuit.Append(func(pt *timer.PomodoroTimer) {
+		config.Timer.Hooks.OnQuit.Append(func(pt *timer.PomodoroTimer) {
 			instance.Close()
 		})
 	}
@@ -394,10 +421,10 @@ func setupDaemons(t *timer.PomodoroTimer) error {
 
 func runWebgui(address string) {
 	slog.Debug("setting up webgui routes")
-	config.httpDaemon.WebguiRoutes(config.CustomCss)
+	httpDaemon.WebguiRoutes(config.CustomCss)
 	if !config.NoOpenBrowser {
 		// set webguiAddress used in mpris raise
-		config.webguiAddress = address
+		webguiAddress = address
 		go utils.OpenURL(utils.FixHttpAddress(address))
 	}
 }

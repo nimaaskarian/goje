@@ -70,8 +70,8 @@ func (d *Daemon) handlePostTimer(c *gin.Context) {
 		if prev_mode != d.Timer.State.Mode {
 			d.Timer.Reset()
 		}
-		if !d.Timer.Config.OnSet.Run(d.Timer) {
-			d.Timer.Config.OnChange.Run(d.Timer)
+		if !d.Timer.Config.Hooks.OnSet.Run(d.Timer) {
+			d.Timer.Config.Hooks.OnChange.Run(d.Timer)
 		}
 		c.JSON(http.StatusOK, d.Timer)
 	}

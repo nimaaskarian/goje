@@ -22,16 +22,16 @@ type Daemon struct {
 }
 
 func (d *Daemon) SetupEvents() {
-	d.Timer.Config.OnChange.Append(func(t *timer.PomodoroTimer) {
+	d.Timer.Config.Hooks.OnChange.Append(func(t *timer.PomodoroTimer) {
 		d.BroadcastToSSEClients(ChangeEvent(t))
 	})
-	d.Timer.Config.OnModeStart.Append(func(t *timer.PomodoroTimer) {
+	d.Timer.Config.Hooks.OnModeStart.Append(func(t *timer.PomodoroTimer) {
 		d.BroadcastToSSEClients(NewEvent(t, "start"))
 	})
-	d.Timer.Config.OnModeEnd.Append(func(t *timer.PomodoroTimer) {
+	d.Timer.Config.Hooks.OnModeEnd.Append(func(t *timer.PomodoroTimer) {
 		d.BroadcastToSSEClients(NewEvent(t, "end"))
 	})
-	d.Timer.Config.OnPause.Append(func(t *timer.PomodoroTimer) {
+	d.Timer.Config.Hooks.OnPause.Append(func(t *timer.PomodoroTimer) {
 		d.BroadcastToSSEClients(NewEvent(t, "pause"))
 	})
 }

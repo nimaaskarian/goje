@@ -109,7 +109,7 @@ func (ins *Instance) Start(ctx context.Context) error {
 	if err != nil || reply != dbus.RequestNameReplyPrimaryOwner {
 		return err
 	}
-	ins.pt.Config.OnChange.Append(func(pt *timer.PomodoroTimer) {
+	ins.pt.Config.Hooks.OnChange.Append(func(pt *timer.PomodoroTimer) {
 		ins.player.setProp("org.mpris.MediaPlayer2.Player", "Position", dbus.MakeVariant(UsFromDuration(pt.State.Duration)))
 		ins.player.setProp("org.mpris.MediaPlayer2.Player", "Metadata", dbus.MakeVariant(MapFromTimer(pt)))
 	})

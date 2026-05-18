@@ -14,14 +14,14 @@ func ntfySetup(config *AppConfig) {
 	slog.Info("setting up ntfy", "address", config.NtfyAddress)
 	config.NtfyAddress = utils.FixHttpAddress(config.NtfyAddress)
 	config.NtfyClickUrl = utils.FixHttpAddress(config.NtfyClickUrl)
-	config.Timer.OnInit.Append((func(pt *timer.PomodoroTimer) {
+	config.Timer.Hooks.OnInit.Append((func(pt *timer.PomodoroTimer) {
 		if req, err := ntfyRequest(config, "Timer init!", "tomato,arrow_forward"); err == nil {
 			if _, err := http.DefaultClient.Do(req); err != nil {
 				slog.Error("Failed to send ntfy request", "err", err)
 			}
 		}
 	}))
-	config.Timer.OnModeStart.Append((func(pt *timer.PomodoroTimer) {
+	config.Timer.Hooks.OnModeStart.Append((func(pt *timer.PomodoroTimer) {
 		var msg, tags string
 		switch pt.State.Mode {
 		case 0:
@@ -40,7 +40,7 @@ func ntfySetup(config *AppConfig) {
 			}
 		}
 	}))
-	config.Timer.OnPause.Append(func(pt *timer.PomodoroTimer) {
+	config.Timer.Hooks.OnPause.Append(func(pt *timer.PomodoroTimer) {
 		var msg, tags string
 		if pt.State.Paused {
 			msg = "Timer paused!"
@@ -56,7 +56,7 @@ func ntfySetup(config *AppConfig) {
 		}
 	})
 	if config.Timer.Paused {
-		config.Timer.OnModeEnd.Append((func(pt *timer.PomodoroTimer) {
+		config.Timer.Hooks.OnModeEnd.Append((func(pt *timer.PomodoroTimer) {
 			if pt.State.Mode == 2 {
 				if req, err := ntfyRequest(config, "Long break ended!", "tomato"); err == nil {
 					if _, err := http.DefaultClient.Do(req); err != nil {

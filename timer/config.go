@@ -4,20 +4,24 @@ import (
 	"time"
 )
 
-type TimerConfig struct {
-	Sessions    uint                    `mapstructure:"sessions,omitempty"`
-	Duration    [MODE_MAX]time.Duration `mapstructure:"duration"`
-	OnModeEnd   TimerConfigEvent        `json:"-"`
-	OnModeStart TimerConfigEvent        `json:"-"`
-	OnChange    TimerConfigEvent        `json:"-"`
+type TimerConfigHooks struct {
+	OnModeEnd   TimerConfigHook `json:"-"`
+	OnModeStart TimerConfigHook `json:"-"`
+	OnChange    TimerConfigHook `json:"-"`
 	// event for clients of an outbound server, to push sets to server. all change
 	// events should run this first, if failed then run other events
-	OnSet           TimerConfigEvent `json:"-"`
-	OnPause         TimerConfigEvent `json:"-"`
-	OnQuit          TimerConfigEvent `json:"-"`
-	OnInit          TimerConfigEvent `json:"-"`
-	Paused          bool             `mapstructure:"paused,omitempty"`
-	DurationPerTick time.Duration    `mapstructure:"duration-per-tick"`
+	OnSet   TimerConfigHook `json:"-"`
+	OnPause TimerConfigHook `json:"-"`
+	OnQuit  TimerConfigHook `json:"-"`
+	OnInit  TimerConfigHook `json:"-"`
+}
+
+type TimerConfig struct {
+	Sessions        uint                    `mapstructure:"sessions,omitempty"`
+	Duration        [MODE_MAX]time.Duration `mapstructure:"duration"`
+	Hooks           TimerConfigHooks        `json:"-"`
+	Paused          bool                    `mapstructure:"paused,omitempty"`
+	DurationPerTick time.Duration           `mapstructure:"duration-per-tick"`
 }
 
 var DefaultConfig = TimerConfig{
@@ -32,17 +36,17 @@ var DefaultConfig = TimerConfig{
 }
 
 // OnEventOnce functions run only on the next event (only once)
-type TimerConfigEvent struct {
+type TimerConfigHook struct {
 	OnEvent     []func(*PomodoroTimer)
 	OnEventOnce []func(*PomodoroTimer)
 }
 
-func (e *TimerConfigEvent) Append(handler func(*PomodoroTimer)) {
+func (e *TimerConfigHook) Append(handler func(*PomodoroTimer)) {
 	e.OnEvent = append(e.OnEvent, func(pt *PomodoroTimer) { go handler(pt) })
 }
 
 // this is non-blocking (goroutine). it iterates through all the events and goroutines them.
-func (e *TimerConfigEvent) Run(t *PomodoroTimer) (ran bool) {
+func (e *TimerConfigHook) Run(t *PomodoroTimer) (ran bool) {
 	for _, handler := range append(e.OnEvent, e.OnEventOnce...) {
 		go handler(t)
 		ran = true
@@ -52,7 +56,7 @@ func (e *TimerConfigEvent) Run(t *PomodoroTimer) (ran bool) {
 }
 
 // blocking version of Run(). uses no goroutines
-func (e *TimerConfigEvent) RunSync(t *PomodoroTimer) (ran bool) {
+func (e *TimerConfigHook) RunSync(t *PomodoroTimer) (ran bool) {
 	for _, handler := range append(e.OnEvent, e.OnEventOnce...) {
 		handler(t)
 		ran = true
